@@ -23,6 +23,9 @@ object EmbeddedServerHttp {
     private var ngrokProcess: Process? = null
     private val logs = LinkedList<String>()
 
+    var lastBuildMessage: String? = null
+    var lastFixFiles: List<com.example.plugin.models.FileFix> = emptyList()
+
     enum class BuildStatus {
         IDLE, RUNNING, SUCCESS, FAILURE
     }
@@ -36,7 +39,7 @@ object EmbeddedServerHttp {
         logs.add("[${Date()}] $msg")
     }
 
-    fun getLastLogs(): String = logs.joinToString("\n")
+    fun getLastLogs(): String = logs.joinToString("\\n")
 
     fun start() {
         try {
@@ -48,7 +51,7 @@ object EmbeddedServerHttp {
                 createContext("/generateQR", GenerateQRHandler())
                 createContext("/runApplication", RunApplicationHandler())
                 createContext("/getFix", GetFixHandler())
-                server?.createContext("/doFix", DoFixHandler())
+                createContext("/doFix", DoFixHandler())
                 createContext("/getBuildStatus", GetStatusHandler())
                 createContext("/status", StatusHandler())
                 executor = null

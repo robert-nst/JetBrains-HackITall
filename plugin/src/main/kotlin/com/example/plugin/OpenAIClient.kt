@@ -22,6 +22,8 @@ object OpenAIClient {
             <full fixed code>
             -- END OF FILE
             
+            Exclude any formatting or comments that are not part of the given code. Exclude the ``` characters. Send raw code only, but include all necessary imports, components or dependencies. Don't forget to include the corresponding package name at the top of the file, that you can extract from the original file.
+            
             Build failure logs:
             $buildMessage
         """.trimIndent()
@@ -73,12 +75,12 @@ object OpenAIClient {
         val prompt = """
         A Java build has failed. Extract:
         - A one-line summary of the cause (start with "MESSAGE:")
-        - The source file path where the error happened (start with "FILE:")
+        - The source file path where the error happened (start with "FILE:" and extract the absolute path)
         - The line number where the error occurred (start with "LINE:")
 
         Example:
         MESSAGE: Missing semicolon in DemoServerApplication.java at line 12.
-        FILE: src/main/java/com/hack/demoserver/DemoServerApplication.java
+        FILE: C:\\path\\to\\the\\project\\src\\main\\java\\com\\example\\Application.java
         LINE: 12
 
         Build logs:

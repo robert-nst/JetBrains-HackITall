@@ -119,9 +119,9 @@ class GetStatusHandler : HttpHandler {
 
             val status = EmbeddedServerHttp.currentBuildStatus.name.lowercase()
             val logs = EmbeddedServerHttp.getLastLogs()
+            EmbeddedServerHttp.lastBuildMessage = logs
             val responseMap = mutableMapOf<String, Any>(
                 "status" to status,
-                "logs" to logs
             )
 
             if (status == "failure") {
@@ -178,33 +178,31 @@ class GetStatusHandler : HttpHandler {
 class GetFixHandler : HttpHandler {
     override fun handle(exchange: HttpExchange) {
         try {
-            if (exchange.requestMethod.equals("POST", ignoreCase = true)) {
-                val gson = Gson()
-                val requestBody = exchange.requestBody.bufferedReader().readText()
-                val getFixRequest = gson.fromJson(requestBody, GetFixRequest::class.java)
-
-                val buildMessage = getFixRequest.buildMessage
-                if (buildMessage.isBlank()) {
-                    respond(exchange, GetFixResponse(false, emptyList(), "Build message is missing"))
-                    return
-                }
-
-                val project = EmbeddedServerHttp.currentProject ?: run {
-                    respond(exchange, GetFixResponse(false, emptyList(), "No project available"))
-                    return
-                }
-
-                val sourceFiles = mutableMapOf<String, String>()
-                val base = File(project.basePath!!)
-                base.walkTopDown()
-                    .filter { it.isFile && it.extension in listOf("java", "kt") }
-                    .forEach { sourceFiles[it.relativeTo(base).path] = it.readText() }
-
-                val files = OpenAIClient.getFixesFromOpenAI(buildMessage, sourceFiles)
-                respond(exchange, GetFixResponse(true, files))
-            } else {
+            if (!exchange.requestMethod.equals("GET", ignoreCase = true)) {
                 exchange.sendResponseHeaders(405, -1)
+                return
             }
+
+            val buildMessage = EmbeddedServerHttp.lastBuildMessage ?: run {
+                respond(exchange, GetFixResponse(false, emptyList(), "No build message available"))
+                return
+            }
+
+            val project = EmbeddedServerHttp.currentProject ?: run {
+                respond(exchange, GetFixResponse(false, emptyList(), "No project available"))
+                return
+            }
+
+            val sourceFiles = mutableMapOf<String, String>()
+            val base = File(project.basePath!!)
+            base.walkTopDown()
+                .filter { it.isFile && it.extension in listOf("java", "kt") }
+                .forEach { sourceFiles[it.relativeTo(base).path] = it.readText() }
+
+            val files = OpenAIClient.getFixesFromOpenAI(buildMessage, sourceFiles)
+            EmbeddedServerHttp.lastFixFiles = files
+            respond(exchange, GetFixResponse(true, files))
+
         } catch (e: Exception) {
             e.printStackTrace()
             respond(exchange, GetFixResponse(false, emptyList(), e.message))
@@ -227,35 +225,42 @@ class DoFixHandler : HttpHandler {
         try {
             if (!exchange.requestMethod.equals("POST", ignoreCase = true)) {
                 exchange.sendResponseHeaders(405, -1)
-                exchange.close()
                 return
             }
 
-            val gson = Gson()
-            val request = gson.fromJson(
-                InputStreamReader(exchange.requestBody, Charsets.UTF_8),
-                DoFixRequest::class.java
-            )
+            val files = EmbeddedServerHttp.lastFixFiles
+            println(files)
+            if (files.isEmpty()) {
+                respond(exchange, DoFixResponse(false, emptyList(), "No fix data available"))
+                return
+            }
 
-            val project = EmbeddedServerHttp.currentProject
-            if (project == null) {
-                respond(exchange, DoFixResponse(false, error = "No project available"))
+            val project = EmbeddedServerHttp.currentProject ?: run {
+                respond(exchange, DoFixResponse(false, emptyList(), "No project available"))
                 return
             }
 
             val updatedFiles = mutableListOf<String>()
 
-            request.files.forEach { fileFix ->
+            files.forEach { fileFix ->
                 try {
-                    val file = File(fileFix.path) // using absolute path as you're sending
+                    val file = File(fileFix.path)
                     if (!file.exists()) {
                         file.parentFile.mkdirs()
                         file.createNewFile()
                     }
-                    file.writeText(fileFix.code)
+
+                    val cleanedCode = fileFix.code
+                        .replace("```java", "")
+                        .replace("```kotlin", "")
+                        .replace("```kt", "")
+                        .replace("```", "")
+                        .trim()
+
+                    file.writeText(cleanedCode)
                     updatedFiles.add(file.absolutePath)
                 } catch (e: Exception) {
-                    respond(exchange, DoFixResponse(false, updatedFiles, "Error writing to file ${fileFix.path}: ${e.message}"))
+                    respond(exchange, DoFixResponse(false, updatedFiles, "Error writing ${fileFix.path}: ${e.message}"))
                     return
                 }
             }
