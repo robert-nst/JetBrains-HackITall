@@ -13,6 +13,7 @@ import com.sun.net.httpserver.HttpServer
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
@@ -25,6 +26,10 @@ import java.util.Base64
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import com.intellij.execution.process.ProcessAdapter
+import com.intellij.execution.process.ProcessEvent
+import com.intellij.openapi.util.Key
+
 
 // Data classes for JSON requests/responses.
 data class RunRequest(val connectionId: String)
@@ -73,8 +78,10 @@ object EmbeddedServerHttp {
             server?.createContext("/generateQR", GenerateQRHandler())
             server?.createContext("/runApplication", RunApplicationHandler())
             server?.createContext("/buildStatus", BuildStatusHandler())
-            // New /status endpoint for plugin status.
-            server?.createContext("/status", StatusHandler())
+            server?.createContext("/getFix", GetFixHandler())
+            server?.createContext("/getStatus", GetStatusHandler())
+
+
             server?.executor = null
             server?.start()
             println("HTTP server started on port $port")
@@ -258,24 +265,44 @@ object EmbeddedServerHttp {
                     val runRequest = gson.fromJson(requestBody, RunRequest::class.java)
                     println("Received run request with connectionId: ${runRequest.connectionId}")
                     log("Received run request with connectionId: ${runRequest.connectionId}")
-                    // Compare the incoming connectionId with the unique ID extracted earlier.
+
                     if (runRequest.connectionId == sessionConnectionId) {
                         val project = currentProject
                         if (project != null) {
                             val runManager = RunManager.getInstance(project)
                             val configurationSettings = runManager.selectedConfiguration
+
                             if (configurationSettings != null) {
                                 val executor = DefaultRunExecutor.getRunExecutorInstance()
-                                val environment = ExecutionEnvironmentBuilder
-                                    .create(executor, configurationSettings)
-                                    .build()
-                                // Update build status: set to RUNNING when starting.
-                                currentBuildStatus = BuildStatus.RUNNING
+                                val environment = ExecutionEnvironmentBuilder.create(executor, configurationSettings).build()
+
                                 ApplicationManager.getApplication().invokeLater {
-                                    ExecutionManager.getInstance(project)
-                                        .restartRunProfile(environment)
-                                    // Optionally update build status based on run outcome.
+                                    currentBuildStatus = BuildStatus.RUNNING
+                                    environment.runner.execute(environment) { descriptor ->
+                                        val processHandler = descriptor.processHandler
+                                        if (processHandler != null) {
+                                            processHandler.addProcessListener(object : ProcessAdapter() {
+                                                override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+                                                    val text = event.text
+                                                    log("[APP] $text")
+                                                }
+
+                                                override fun processTerminated(event: ProcessEvent) {
+                                                    if (event.exitCode == 0) {
+                                                        currentBuildStatus = BuildStatus.SUCCESS
+                                                    } else {
+                                                        currentBuildStatus = BuildStatus.FAILURE
+                                                    }
+                                                    log("[APP] Process terminated with exit code: ${event.exitCode}")
+                                                }
+                                            })
+                                        } else {
+                                            currentBuildStatus = BuildStatus.FAILURE
+                                            log("[APP] Failed to obtain process handler.")
+                                        }
+                                    }
                                 }
+
                                 val response = RunResponse(true, "Run configuration executed.")
                                 val responseBytes = gson.toJson(response).toByteArray(StandardCharsets.UTF_8)
                                 exchange.responseHeaders.add("Content-Type", "application/json")
@@ -314,30 +341,6 @@ object EmbeddedServerHttp {
         }
     }
 
-    // New /status endpoint (separate from /buildStatus).
-    private class StatusHandler : HttpHandler {
-        override fun handle(exchange: HttpExchange) {
-            try {
-                if (exchange.requestMethod.equals("GET", ignoreCase = true)) {
-                    // Determine status based on whether a public URL has been set.
-                    val status = if (sessionPublicUrl.isNotBlank()) "running" else "not running"
-                    val httpStatusCode = if (status == "running") 200 else 503
-                    val jsonResponse = Gson().toJson(mapOf("status" to status))
-                    val responseBytes = jsonResponse.toByteArray(StandardCharsets.UTF_8)
-                    exchange.responseHeaders.add("Content-Type", "application/json")
-                    exchange.sendResponseHeaders(httpStatusCode, responseBytes.size.toLong())
-                    exchange.responseBody.write(responseBytes)
-                } else {
-                    exchange.sendResponseHeaders(405, -1)
-                }
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                exchange.sendResponseHeaders(500, -1)
-            } finally {
-                exchange.close()
-            }
-        }
-    }
 
     private fun imageToBase64(image: BufferedImage): String {
         val baos = ByteArrayOutputStream()
@@ -347,28 +350,90 @@ object EmbeddedServerHttp {
 
     private class BuildStatusHandler : HttpHandler {
         override fun handle(exchange: HttpExchange) {
+            val status = currentBuildStatus.name.lowercase()
+            val json = """{"status": "$status"}"""
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, json.toByteArray().size.toLong())
+            exchange.responseBody.use { it.write(json.toByteArray()) }
+            exchange.close()
+        }
+    }
+
+    private class GetStatusHandler : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
             try {
                 if (exchange.requestMethod.equals("GET", ignoreCase = true)) {
-                    val status = currentBuildStatus
-                    val httpStatusCode = when (status) {
-                        BuildStatus.RUNNING, BuildStatus.SUCCESS -> 200
-                        BuildStatus.IDLE -> 503
-                        BuildStatus.FAILURE -> 500
-                    }
-                    val jsonResponse = Gson().toJson(mapOf("status" to status.name.lowercase()))
-                    val responseBytes = jsonResponse.toByteArray(StandardCharsets.UTF_8)
+                    val gson = Gson()
+                    val json = gson.toJson(
+                        mapOf(
+                            "status" to currentBuildStatus.name.lowercase(),
+                            "logs" to getLastLogs()
+                        )
+                    )
+                    val responseBytes = json.toByteArray(StandardCharsets.UTF_8)
                     exchange.responseHeaders.add("Content-Type", "application/json")
-                    exchange.sendResponseHeaders(httpStatusCode, responseBytes.size.toLong())
+                    exchange.sendResponseHeaders(200, responseBytes.size.toLong())
                     exchange.responseBody.write(responseBytes)
                 } else {
                     exchange.sendResponseHeaders(405, -1)
                 }
-            } catch (ex: Exception) {
-                ex.printStackTrace()
+            } catch (e: Exception) {
+                e.printStackTrace()
                 exchange.sendResponseHeaders(500, -1)
             } finally {
                 exchange.close()
             }
         }
     }
+
+
+    private class GetFixHandler : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
+            try {
+                if (exchange.requestMethod.equals("POST", ignoreCase = true)) {
+                    val requestBody = exchange.requestBody.bufferedReader().readText()
+                    val gson = Gson()
+                    val getFixRequest = gson.fromJson(requestBody, GetFixRequest::class.java)
+
+                    val buildMessage = getFixRequest.buildMessage
+                    if (buildMessage.isBlank()) {
+                        sendResponse(exchange, GetFixResponse(false, emptyList(), "Build message is missing"))
+                        return
+                    }
+
+                    val project = currentProject ?: run {
+                        sendResponse(exchange, GetFixResponse(false, emptyList(), "No project available"))
+                        return
+                    }
+
+                    // Collect all source files
+                    val sourceFiles = mutableMapOf<String, String>()
+                    val base = File(project.basePath!!)
+                    base.walkTopDown().filter { it.isFile && it.extension in listOf("java", "kt") }
+                        .forEach { sourceFiles[it.relativeTo(base).path] = it.readText() }
+
+                    val files = OpenAIClient.getFixesFromOpenAI(buildMessage, sourceFiles)
+                    sendResponse(exchange, GetFixResponse(true, files))
+
+                } else {
+                    exchange.sendResponseHeaders(405, -1)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                sendResponse(exchange, GetFixResponse(false, emptyList(), e.message))
+            } finally {
+                exchange.close()
+            }
+        }
+
+        private fun sendResponse(exchange: HttpExchange, response: GetFixResponse) {
+            val json = Gson().toJson(response)
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            val bytes = json.toByteArray()
+            exchange.sendResponseHeaders(200, bytes.size.toLong())
+            exchange.responseBody.use { it.write(bytes) }
+        }
+    }
+
+
 }
