@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin>
+    <id>com.example.plugin</id>
+    <name>Plugin</name>
+    <vendor email="napruiuandrei@yourcompany.com" url="https://www.napruiu.com">compania mea</vendor>
+    <description><![CDATA[
+    Ceva descriere la misto. O descriere de minim 40 de caractere.
+  ]]></description>
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Register the startup activity as a ProjectActivity -->
+        <postStartupActivity implementation="com.example.plugin.PluginStartupActivity"/>
+        <!-- Register your tool window on the right side -->
+        <toolWindow factoryClass="com.example.plugin.MyToolWindowFactory"
+                    id="Program on The Go"
+                    anchor="right"
+                    secondary="false"/>
+    </extensions>
+
+    <actions>
+        <!-- Register an action that (for example) fetches and shows the QR code -->
+        <action id="GenerateQRCodeAction"
+                class="com.example.plugin.GenerateQRCodeAction"
+                text="Generate QR Code"
+                description="Shows the session QR Code">
+            <add-to-group group-id="ToolbarRunGroup" anchor="first"/>
+        </action>
+    </actions>
+</idea-plugin>
