@@ -73,6 +73,8 @@ object EmbeddedServerHttp {
             server?.createContext("/generateQR", GenerateQRHandler())
             server?.createContext("/runApplication", RunApplicationHandler())
             server?.createContext("/buildStatus", BuildStatusHandler())
+            // New /status endpoint for plugin status.
+            server?.createContext("/status", StatusHandler())
             server?.executor = null
             server?.start()
             println("HTTP server started on port $port")
@@ -267,9 +269,12 @@ object EmbeddedServerHttp {
                                 val environment = ExecutionEnvironmentBuilder
                                     .create(executor, configurationSettings)
                                     .build()
+                                // Update build status: set to RUNNING when starting.
+                                currentBuildStatus = BuildStatus.RUNNING
                                 ApplicationManager.getApplication().invokeLater {
                                     ExecutionManager.getInstance(project)
                                         .restartRunProfile(environment)
+                                    // Optionally update build status based on run outcome.
                                 }
                                 val response = RunResponse(true, "Run configuration executed.")
                                 val responseBytes = gson.toJson(response).toByteArray(StandardCharsets.UTF_8)
@@ -309,6 +314,31 @@ object EmbeddedServerHttp {
         }
     }
 
+    // New /status endpoint (separate from /buildStatus).
+    private class StatusHandler : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
+            try {
+                if (exchange.requestMethod.equals("GET", ignoreCase = true)) {
+                    // Determine status based on whether a public URL has been set.
+                    val status = if (sessionPublicUrl.isNotBlank()) "running" else "not running"
+                    val httpStatusCode = if (status == "running") 200 else 503
+                    val jsonResponse = Gson().toJson(mapOf("status" to status))
+                    val responseBytes = jsonResponse.toByteArray(StandardCharsets.UTF_8)
+                    exchange.responseHeaders.add("Content-Type", "application/json")
+                    exchange.sendResponseHeaders(httpStatusCode, responseBytes.size.toLong())
+                    exchange.responseBody.write(responseBytes)
+                } else {
+                    exchange.sendResponseHeaders(405, -1)
+                }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+                exchange.sendResponseHeaders(500, -1)
+            } finally {
+                exchange.close()
+            }
+        }
+    }
+
     private fun imageToBase64(image: BufferedImage): String {
         val baos = ByteArrayOutputStream()
         ImageIO.write(image, "png", baos)
@@ -317,12 +347,28 @@ object EmbeddedServerHttp {
 
     private class BuildStatusHandler : HttpHandler {
         override fun handle(exchange: HttpExchange) {
-            val status = currentBuildStatus.name.lowercase()
-            val json = """{"status": "$status"}"""
-            exchange.responseHeaders.add("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, json.toByteArray().size.toLong())
-            exchange.responseBody.use { it.write(json.toByteArray()) }
-            exchange.close()
+            try {
+                if (exchange.requestMethod.equals("GET", ignoreCase = true)) {
+                    val status = currentBuildStatus
+                    val httpStatusCode = when (status) {
+                        BuildStatus.RUNNING, BuildStatus.SUCCESS -> 200
+                        BuildStatus.IDLE -> 503
+                        BuildStatus.FAILURE -> 500
+                    }
+                    val jsonResponse = Gson().toJson(mapOf("status" to status.name.lowercase()))
+                    val responseBytes = jsonResponse.toByteArray(StandardCharsets.UTF_8)
+                    exchange.responseHeaders.add("Content-Type", "application/json")
+                    exchange.sendResponseHeaders(httpStatusCode, responseBytes.size.toLong())
+                    exchange.responseBody.write(responseBytes)
+                } else {
+                    exchange.sendResponseHeaders(405, -1)
+                }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+                exchange.sendResponseHeaders(500, -1)
+            } finally {
+                exchange.close()
+            }
         }
     }
 }
