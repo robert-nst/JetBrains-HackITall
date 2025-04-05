@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/utils/app_constants.dart';
 import '../repository/connection_repository.dart';
 import '../domain/connection_status.dart';
+import 'package:http/http.dart' as http;
 
 final connectionRepositoryProvider = Provider((ref) => ConnectionRepository());
 
@@ -47,6 +49,30 @@ class ConnectionStatusNotifier extends StateNotifier<ConnectionStatus> {
         _pollTimer?.cancel();
       }
     });
+  }
+
+  static Future<bool> ping(String baseUrl) async {
+    
+    final url = Uri.parse('$baseUrl/status');
+    logger.d('Sending request to: $url');
+
+    try {
+      final response = await http.get(url).timeout(const Duration(seconds: 5));
+      logger.d('Ping response status code: ${response.statusCode}');
+      return response.statusCode == 200;
+    } on TimeoutException {
+      logger.e('Ping request timed out');
+      return false;
+    } catch (e) {
+      logger.e('Error pinging URL: $e');
+      return false;
+    }
+  }
+
+  void stop() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    state = ConnectionStatus.disconnected;
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/data/connection_storage.dart';
 import 'package:mobile/data/domain/connection_status.dart';
 import 'package:mobile/utils/app_constants.dart';
 import 'package:mobile/utils/dialog_widgets.dart';
@@ -20,6 +21,16 @@ class ConnectedScreen extends ConsumerStatefulWidget {
 class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
   bool _alertShown = false;
   bool _runButtonDisabled = false;
+  bool _manualDisconnect = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      ref.read(connectionStatusProvider.notifier).connect(widget.url);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +39,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
     final buildStatus = buildData?['status']?.toString().toLowerCase();
 
     // If connection drops, show alert and redirect
-    if (!_alertShown && connectionStatus == ConnectionStatus.disconnected) {
+    if (!_alertShown && connectionStatus == ConnectionStatus.disconnected && !_manualDisconnect) {
       _alertShown = true;
 
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -72,6 +83,16 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
                       color: Colors.blueAccent,
                       fontWeight: FontWeight.bold,
                     ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  _manualDisconnect = true;
+                  await ConnectionStorage.clearConnectedUrl();
+                  ref.read(connectionStatusProvider.notifier).stop();
+                  navigateAndRemoveAll(context, const ConnectScreen());
+                },
+                child: const Text("Disconnect"),
               ),
               const SizedBox(height: 40),
               ElevatedButton(
