@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/connection_repository.dart';
-import '../domain/connection_status.dart';
+import '../repository/connection_repository.dart';
+import '../connection_status.dart';
 
 final connectionRepositoryProvider = Provider((ref) => ConnectionRepository());
 

@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/utils/app_constants.dart';
 import 'package:mobile/utils/dialog_widgets.dart';
 
-import '../../connection/provider/connection_provider.dart';
-import '../../connection/domain/connection_status.dart';
-import '../../connection/presentation/connect_screen.dart';
+import '../data/provider/connection_provider.dart';
+import '../data/connection_status.dart';
+import 'connect_screen.dart';
 
 class ConnectedScreen extends ConsumerStatefulWidget {
   final String url;

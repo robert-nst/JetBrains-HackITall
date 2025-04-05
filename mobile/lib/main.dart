@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile/features/connection/presentation/connect_screen.dart';
+import 'package:mobile/presentation/connect_screen.dart';
 import 'package:mobile/firebase_options.dart';
 
 void main() async {
