@@ -59,12 +59,19 @@ class RunApplicationHandler : HttpHandler {
                                 if (handler != null) {
                                     handler.addProcessListener(object : ProcessAdapter() {
                                         override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-                                            EmbeddedServerHttp.log("[APP] ${event.text}")
+                                            val text = event.text
+                                            EmbeddedServerHttp.log("[APP] $text")
+
+                                            if (text.contains("Tomcat started on port", ignoreCase = true)) {
+                                                EmbeddedServerHttp.currentBuildStatus = BuildStatus.SUCCESS
+                                            }
                                         }
 
                                         override fun processTerminated(event: ProcessEvent) {
-                                            val status = if (event.exitCode == 0) BuildStatus.SUCCESS else BuildStatus.FAILURE
-                                            EmbeddedServerHttp.currentBuildStatus = status
+                                            if (EmbeddedServerHttp.currentBuildStatus == BuildStatus.RUNNING) {
+                                                val status = if (event.exitCode == 0) BuildStatus.SUCCESS else BuildStatus.FAILURE
+                                                EmbeddedServerHttp.currentBuildStatus = status
+                                            }
                                             EmbeddedServerHttp.log("[APP] Process terminated with exit code: ${event.exitCode}")
                                         }
                                     })
