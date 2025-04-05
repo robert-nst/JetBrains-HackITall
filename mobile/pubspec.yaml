@@ -43,6 +43,7 @@ dependencies:
   logger: ^2.0.2
   mobile_scanner: ^3.5.2
   cool_alert: ^2.0.1
+  firebase_core: ^3.13.0
 
 dev_dependencies:
   flutter_test:
