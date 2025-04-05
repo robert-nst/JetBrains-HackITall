@@ -27,6 +27,9 @@ dependencies {
     implementation("com.google.code.gson:gson:2.8.9")
 
     implementation("io.github.cdimascio:dotenv-java:2.2.0")
+
+    implementation("org.json:json:20230618")
+
 }
 
 // Configure Gradle IntelliJ Plugin
