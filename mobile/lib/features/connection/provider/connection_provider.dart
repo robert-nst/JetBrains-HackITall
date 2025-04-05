@@ -17,15 +17,17 @@ class ConnectionStatusNotifier extends StateNotifier<ConnectionStatus> {
 
   ConnectionStatusNotifier(this._repository) : super(ConnectionStatus.idle);
 
-  Future<void> connect(String baseUrl) async {
+  Future<bool> connect(String baseUrl) async {
     state = ConnectionStatus.connecting;
     final ok = await _repository.ping(baseUrl);
     if (ok) {
       _currentUrl = baseUrl;
       state = ConnectionStatus.connected;
       _startPolling();
+      return true;
     } else {
       state = ConnectionStatus.error;
+      return false;
     }
   }
 

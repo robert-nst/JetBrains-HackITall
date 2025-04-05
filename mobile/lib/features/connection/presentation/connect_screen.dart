@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile/features/connection/presentation/connected_screen.dart';
+import 'package:mobile/utils/app_constants.dart';
+import 'package:mobile/utils/dialog_widgets.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../provider/connection_provider.dart';
 import '../domain/connection_status.dart';
@@ -100,7 +103,18 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => notifier.connect(urlController.text),
+                onPressed: () async {
+                  loadingDialog(context);
+                  final success = await notifier.connect(urlController.text);
+                  if (success) {
+                    // Navigate to the connected screen
+                    // Navigator.pop(context); // Close the loading dialog
+                    navigateAndReplace(context, ConnectedScreen(url: urlController.text));
+                  } else {
+                    // Navigator.pop(context); // Close the loading dialog
+                    errorDialog(context, "Could not connect to the server.");
+                  }
+                },
                 child: const Text('Connect'),
               ),
               const SizedBox(height: 24),
