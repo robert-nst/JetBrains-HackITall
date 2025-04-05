@@ -4,6 +4,12 @@ import 'package:logger/logger.dart';
 /// CONSTANTS
 var logger = Logger(printer: PrettyPrinter(),);
 
+bool isValidNgrokUrl(String url) {
+  const pattern = r'^https:\/\/[a-z0-9\-]+\.ngrok-free\.app$';
+  final regExp = RegExp(pattern);
+  return regExp.hasMatch(url);
+}
+
 /// NAVIGATION
 void navigateTo(BuildContext context, Widget page) {
   Navigator.push(

@@ -17,6 +17,43 @@ class ConnectScreen extends ConsumerStatefulWidget {
 class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   final TextEditingController urlController = TextEditingController();
 
+  Future<void> _attemptConnection(BuildContext context, WidgetRef ref) async {
+    loadingDialog(context);
+
+    final notifier = ref.read(connectionStatusProvider.notifier);
+    final url = urlController.text.trim();
+
+    if (!isValidNgrokUrl(url)) {
+      Navigator.pop(context); // Close loading dialog
+      errorDialog(context, "Invalid URL format. Please try again.");
+      return;
+    }
+
+    final success = await notifier.connect(url);
+    Navigator.pop(context); // Close loading dialog
+
+    if (success) {
+      navigateAndReplace(context, ConnectedScreen(url: url));
+    } else {
+      errorDialog(context, "Could not connect to the server.");
+    }
+  }
+
+  Future<void> _captureUrl(BarcodeCapture capture, BuildContext context, WidgetRef ref, MobileScannerController scannerController) async {
+    final raw = capture.barcodes.first.rawValue;
+    if (raw != null) {
+      scannerController.dispose();
+      Navigator.of(context).pop(); // Close dialog
+
+      setState(() {
+        urlController.text = raw;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      _attemptConnection(context, ref);
+    }
+  }
+
   void _showQRScannerDialog(BuildContext context) {
     
     final scannerController = MobileScannerController(
@@ -38,14 +75,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
             children: [
               MobileScanner(
                 controller: scannerController,
-                onDetect: (capture) {
-                  final raw = capture.barcodes.first.rawValue;
-                  if (raw != null && raw.startsWith('http')) {
-                    urlController.text = raw;
-                    scannerController.dispose();
-                    Navigator.of(context).pop(); // Close dialog
-                  }
-                },
+                onDetect: (capture) => _captureUrl(capture, context, ref, scannerController),
               ),
               Center(child: _buildScannerOverlay()),
               Positioned(
@@ -80,7 +110,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(connectionStatusProvider);
-    final notifier = ref.read(connectionStatusProvider.notifier);
+    // final notifier = ref.read(connectionStatusProvider.notifier);
 
     return GestureDetector(
       // behavior: HitTestBehavior.opaque,
@@ -94,7 +124,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               TextField(
                 controller: urlController,
                 decoration: InputDecoration(
-                  labelText: 'Server URL (e.g. https://abc.ngrok.io)',
+                  labelText: 'Server URL (e.g. https://example.com)',
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.qr_code_scanner),
                     onPressed: () => _showQRScannerDialog(context),
@@ -103,18 +133,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () async {
-                  loadingDialog(context);
-                  final success = await notifier.connect(urlController.text);
-                  if (success) {
-                    // Navigate to the connected screen
-                    // Navigator.pop(context); // Close the loading dialog
-                    navigateAndReplace(context, ConnectedScreen(url: urlController.text));
-                  } else {
-                    // Navigator.pop(context); // Close the loading dialog
-                    errorDialog(context, "Could not connect to the server.");
-                  }
-                },
+                onPressed: () => _attemptConnection(context, ref),
                 child: const Text('Connect'),
               ),
               const SizedBox(height: 24),

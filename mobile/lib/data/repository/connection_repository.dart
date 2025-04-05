@@ -1,10 +1,18 @@
 import 'package:http/http.dart' as http;
+import 'package:mobile/utils/app_constants.dart';
 
 class ConnectionRepository {
   Future<bool> ping(String baseUrl) async {
-    final url = Uri.parse('$baseUrl/ping');
-    final response = await http.get(url).timeout(const Duration(seconds: 3));
-    return response.statusCode == 200;
+    final url = Uri.parse('$baseUrl/status');
+    logger.d('Pinging URL: $url');
+    try {
+      final response = await http.get(url).timeout(const Duration(seconds: 3));
+      logger.d('Ping response status code: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      logger.e('Error pinging URL: $e');
+      return false;
+    }
   }
 
   Future<Map<String, dynamic>> getStatus(String baseUrl) async {
