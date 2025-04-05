@@ -39,14 +39,17 @@ object EmbeddedServerHttp {
     var sessionConnectionId: String = ""
     var sessionQrCode: String = ""
 
-    // New variable to track application status.
-    // Defaults to "not running".
-    var applicationStatus: String = "not running"
-
     private var server: HttpServer? = null
     private var ngrokProcess: Process? = null
 
     private val logs = LinkedList<String>()
+
+    enum class BuildStatus {
+        IDLE, RUNNING, SUCCESS, FAILURE
+    }
+
+    @Volatile
+    var currentBuildStatus: BuildStatus = BuildStatus.IDLE
 
     fun log(msg: String) {
         println(msg)
@@ -69,8 +72,7 @@ object EmbeddedServerHttp {
             log("HTTP server created on port $port")
             server?.createContext("/generateQR", GenerateQRHandler())
             server?.createContext("/runApplication", RunApplicationHandler())
-            // Register the new /status endpoint.
-            server?.createContext("/status", StatusHandler())
+            server?.createContext("/buildStatus", BuildStatusHandler())
             server?.executor = null
             server?.start()
             println("HTTP server started on port $port")
@@ -265,13 +267,9 @@ object EmbeddedServerHttp {
                                 val environment = ExecutionEnvironmentBuilder
                                     .create(executor, configurationSettings)
                                     .build()
-                                // Set status to "in progress" before launching.
-                                applicationStatus = "in progress"
                                 ApplicationManager.getApplication().invokeLater {
                                     ExecutionManager.getInstance(project)
                                         .restartRunProfile(environment)
-                                    // Update status to "running" after launching.
-                                    applicationStatus = "running"
                                 }
                                 val response = RunResponse(true, "Run configuration executed.")
                                 val responseBytes = gson.toJson(response).toByteArray(StandardCharsets.UTF_8)
@@ -311,44 +309,20 @@ object EmbeddedServerHttp {
         }
     }
 
-    // New StatusHandler endpoint.
-    private class StatusHandler : HttpHandler {
-        override fun handle(exchange: HttpExchange) {
-            try {
-                if (exchange.requestMethod.equals("GET", ignoreCase = true)) {
-                    // Determine status based on the applicationStatus variable and server availability.
-                    val status: String = when {
-                        applicationStatus.equals("in progress", ignoreCase = true) -> "in progress"
-                        server != null -> "running"
-                        else -> "not running"
-                    }
-                    // Map status to an HTTP status code.
-                    val httpStatusCode = when (status.lowercase()) {
-                        "running" -> 200
-                        "in progress" -> 202
-                        "not running" -> 503
-                        else -> 500
-                    }
-                    val jsonResponse = Gson().toJson(mapOf("status" to status))
-                    val responseBytes = jsonResponse.toByteArray(StandardCharsets.UTF_8)
-                    exchange.responseHeaders.add("Content-Type", "application/json")
-                    exchange.sendResponseHeaders(httpStatusCode, responseBytes.size.toLong())
-                    exchange.responseBody.write(responseBytes)
-                } else {
-                    exchange.sendResponseHeaders(405, -1)
-                }
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                exchange.sendResponseHeaders(500, -1)
-            } finally {
-                exchange.close()
-            }
-        }
-    }
-
     private fun imageToBase64(image: BufferedImage): String {
         val baos = ByteArrayOutputStream()
         ImageIO.write(image, "png", baos)
         return Base64.getEncoder().encodeToString(baos.toByteArray())
+    }
+
+    private class BuildStatusHandler : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
+            val status = currentBuildStatus.name.lowercase()
+            val json = """{"status": "$status"}"""
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, json.toByteArray().size.toLong())
+            exchange.responseBody.use { it.write(json.toByteArray()) }
+            exchange.close()
+        }
     }
 }

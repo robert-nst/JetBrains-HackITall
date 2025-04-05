@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <idea-plugin>
-    <id>com.example.testhack</id>
-    <name>Testhack</name>
+    <id>com.example.plugin</id>
+    <name>Plugin</name>
     <vendor email="napruiuandrei@yourcompany.com" url="https://www.napruiu.com">compania mea</vendor>
     <description><![CDATA[
     Ceva descriere la misto. O descriere de minim 40 de caractere.
