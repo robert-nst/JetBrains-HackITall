@@ -48,6 +48,7 @@ object EmbeddedServerHttp {
                 createContext("/generateQR", GenerateQRHandler())
                 createContext("/runApplication", RunApplicationHandler())
                 createContext("/getFix", GetFixHandler())
+                server?.createContext("/doFix", DoFixHandler())
                 createContext("/getBuildStatus", GetStatusHandler())
                 createContext("/status", StatusHandler())
                 executor = null
