@@ -5,7 +5,7 @@ import 'package:mobile/utils/app_constants.dart';
 import 'package:mobile/utils/dialog_widgets.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../data/provider/connection_provider.dart';
-import '../data/connection_status.dart';
+import '../data/domain/connection_status.dart';
 
 class ConnectScreen extends ConsumerStatefulWidget {
   const ConnectScreen({super.key});

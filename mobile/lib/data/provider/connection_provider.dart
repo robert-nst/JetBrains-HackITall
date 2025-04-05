@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repository/connection_repository.dart';
-import '../connection_status.dart';
+import '../domain/connection_status.dart';
 
 final connectionRepositoryProvider = Provider((ref) => ConnectionRepository());
 
@@ -19,6 +19,7 @@ class ConnectionStatusNotifier extends StateNotifier<ConnectionStatus> {
 
   Future<bool> connect(String baseUrl) async {
     state = ConnectionStatus.connecting;
+    
     final ok = await _repository.ping(baseUrl);
     if (ok) {
       _currentUrl = baseUrl;
