@@ -11,6 +11,22 @@ repositories {
     mavenCentral()
 }
 
+// Exclude conflicting SLF4J modules from all configurations.
+configurations.all {
+    exclude(group = "org.slf4j", module = "slf4j-jul")
+    exclude(group = "org.slf4j", module = "slf4j-jdk14")
+}
+
+dependencies {
+    // Use only the SLF4J API (no binding)
+    implementation("org.slf4j:slf4j-api:1.7.36")
+
+    // ZXing for QR code generation
+    implementation("com.google.zxing:core:3.5.0")
+    // Gson for JSON conversion
+    implementation("com.google.code.gson:gson:2.8.9")
+}
+
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
