@@ -22,7 +22,7 @@ class GenerateQRHandler : HttpHandler {
     override fun handle(exchange: HttpExchange) {
         try {
             if (exchange.requestMethod.equals("GET", ignoreCase = true)) {
-                val jsonResponse = """{"connectionId": \"${EmbeddedServerHttp.sessionConnectionId}\", "qrCode": \"${EmbeddedServerHttp.sessionQrCode}\"}"""
+                val jsonResponse = """{"qrCode": \"${EmbeddedServerHttp.sessionQrCode}\"}"""
                 val responseBytes = jsonResponse.toByteArray(StandardCharsets.UTF_8)
                 exchange.responseHeaders.add("Content-Type", "application/json")
                 exchange.sendResponseHeaders(200, responseBytes.size.toLong())
@@ -43,51 +43,42 @@ class RunApplicationHandler : HttpHandler {
     override fun handle(exchange: HttpExchange) {
         try {
             if (exchange.requestMethod.equals("POST", ignoreCase = true)) {
-                val gson = Gson()
-                val requestBody = exchange.requestBody.bufferedReader().readText()
-                val runRequest = gson.fromJson(requestBody, RunRequest::class.java)
-                EmbeddedServerHttp.log("Received run request with connectionId: ${runRequest.connectionId}")
+                val project = EmbeddedServerHttp.currentProject
+                if (project != null) {
+                    val runManager = RunManager.getInstance(project)
+                    val config = runManager.selectedConfiguration
+                    if (config != null) {
+                        val executor = DefaultRunExecutor.getRunExecutorInstance()
+                        val env = ExecutionEnvironmentBuilder.create(executor, config).build()
 
-                if (runRequest.connectionId == EmbeddedServerHttp.sessionConnectionId) {
-                    val project = EmbeddedServerHttp.currentProject
-                    if (project != null) {
-                        val runManager = RunManager.getInstance(project)
-                        val config = runManager.selectedConfiguration
-                        if (config != null) {
-                            val executor = DefaultRunExecutor.getRunExecutorInstance()
-                            val env = ExecutionEnvironmentBuilder.create(executor, config).build()
+                        ApplicationManager.getApplication().invokeLater {
+                            EmbeddedServerHttp.currentBuildStatus = BuildStatus.RUNNING
+                            env.runner.execute(env) { descriptor ->
+                                val handler = descriptor.processHandler
+                                if (handler != null) {
+                                    handler.addProcessListener(object : ProcessAdapter() {
+                                        override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+                                            EmbeddedServerHttp.log("[APP] ${event.text}")
+                                        }
 
-                            ApplicationManager.getApplication().invokeLater {
-                                EmbeddedServerHttp.currentBuildStatus = BuildStatus.RUNNING
-                                env.runner.execute(env) { descriptor ->
-                                    val handler = descriptor.processHandler
-                                    if (handler != null) {
-                                        handler.addProcessListener(object : ProcessAdapter() {
-                                            override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-                                                EmbeddedServerHttp.log("[APP] ${event.text}")
-                                            }
-
-                                            override fun processTerminated(event: ProcessEvent) {
-                                                val status = if (event.exitCode == 0) BuildStatus.SUCCESS else BuildStatus.FAILURE
-                                                EmbeddedServerHttp.currentBuildStatus = status
-                                                EmbeddedServerHttp.log("[APP] Process terminated with exit code: ${event.exitCode}")
-                                            }
-                                        })
-                                    } else {
-                                        EmbeddedServerHttp.currentBuildStatus = BuildStatus.FAILURE
-                                        EmbeddedServerHttp.log("[APP] Failed to obtain process handler.")
-                                    }
+                                        override fun processTerminated(event: ProcessEvent) {
+                                            val status = if (event.exitCode == 0) BuildStatus.SUCCESS else BuildStatus.FAILURE
+                                            EmbeddedServerHttp.currentBuildStatus = status
+                                            EmbeddedServerHttp.log("[APP] Process terminated with exit code: ${event.exitCode}")
+                                        }
+                                    })
+                                } else {
+                                    EmbeddedServerHttp.currentBuildStatus = BuildStatus.FAILURE
+                                    EmbeddedServerHttp.log("[APP] Failed to obtain process handler.")
                                 }
                             }
-                            respond(exchange, RunResponse(true, "Run configuration executed."))
-                        } else {
-                            respond(exchange, RunResponse(false, "No run configuration selected."), 400)
                         }
+                        respond(exchange, RunResponse(true, "Run configuration executed."))
                     } else {
-                        respond(exchange, RunResponse(false, "No project available."), 400)
+                        respond(exchange, RunResponse(false, "No run configuration selected."), 400)
                     }
                 } else {
-                    respond(exchange, RunResponse(false, "Invalid connection ID."), 403)
+                    respond(exchange, RunResponse(false, "No project available."), 400)
                 }
             } else {
                 exchange.sendResponseHeaders(405, -1)
