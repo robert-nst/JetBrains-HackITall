@@ -41,8 +41,18 @@ class ConnectionStatusNotifier extends StateNotifier<ConnectionStatus> {
       try {
         final ok = await _repository.ping(_currentUrl!);
         if (!ok) {
-          state = ConnectionStatus.disconnected;
-          _pollTimer?.cancel();
+          logger.w('First ping failed. Retrying once before disconnecting...');
+          final retry = await _repository.ping(_currentUrl!);
+
+          if (!retry) {
+            logger.e('Second ping failed. Disconnecting...');
+            state = ConnectionStatus.disconnected;
+            _pollTimer?.cancel();
+          } else {
+            logger.i('Second ping succeeded. False alarm.');
+          }
+        } else {
+          state = ConnectionStatus.connected;
         }
       } catch (_) {
         state = ConnectionStatus.disconnected;
