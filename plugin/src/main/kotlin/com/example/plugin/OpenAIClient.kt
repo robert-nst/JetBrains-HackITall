@@ -18,7 +18,9 @@ object OpenAIClient {
             Return only the full corrected content for each file that needs to be updated, no explanations.
             Each file must be in this format:
             
-            -- START OF FILE: path/to/File.java
+            -- START OF FILE: path/to/File.java ONLY ABSOLUTE PATH IS ACCEPTED
+            EXPLANATION: <explanation of the fix>
+            LINES_AFFECTED: <comma-separated list of line numbers affected by the fix>
             <full fixed code>
             -- END OF FILE
             
@@ -59,23 +61,35 @@ object OpenAIClient {
     }
 
     private fun parseFileFixes(response: String): List<FileFix> {
-        val pattern = Pattern.compile("-- START OF FILE: (.*?)\\R(.*?)\\R-- END OF FILE", Pattern.DOTALL)
+        // Use \R to match any line break (works for \n, \r\n, etc.)
+        val pattern = Pattern.compile(
+            "-- START OF FILE:\\s*(.*?)\\s*\\R" +
+                    "EXPLANATION:\\s*(.*?)\\s*\\R" +
+                    "LINES_AFFECTED:\\s*(.*?)\\s*\\R" +
+                    "(.*?)" +
+                    "-- END OF FILE",
+            Pattern.DOTALL or Pattern.MULTILINE
+        )
         val matcher = pattern.matcher(response)
-
         val files = mutableListOf<FileFix>()
         while (matcher.find()) {
             val path = matcher.group(1).trim()
-            val code = matcher.group(2).trim()
-            files.add(FileFix(path, code))
+            val explanation = matcher.group(2).trim()
+            val linesAffectedRaw = matcher.group(3).trim()
+            val code = matcher.group(4).trim()
+            // Split the linesAffected string by commas and convert each to an integer.
+            val linesAffected = linesAffectedRaw.split(",").mapNotNull { it.trim().toIntOrNull() }
+            files.add(FileFix(path, code, explanation, linesAffected))
         }
         return files
     }
+
 
     fun summarizeErrorWithContext(buildLogs: String): ErrorSummary {
         val prompt = """
         A Java build has failed. Extract:
         - A one-line summary of the cause (start with "MESSAGE:")
-        - The source file path where the error happened (start with "FILE:" and extract the absolute path)
+        - The source file path where the error happened (start with "FILE:" and extract the absolute path, no relative path accepted)
         - The line number where the error occurred (start with "LINE:")
 
         Example:

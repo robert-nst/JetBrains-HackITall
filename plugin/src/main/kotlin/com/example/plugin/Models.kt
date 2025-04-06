@@ -20,8 +20,11 @@ data class GetFixRequest(
 
 data class FileFix(
     val path: String,
-    val code: String
+    val code: String,
+    val explanation: String,
+    val linesAffected: List<Int>
 )
+
 
 data class GetFixResponse(
     val success: Boolean,
