@@ -54,7 +54,8 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> with SingleTi
 
     if (widget.autoRunBuild) {
       Future.microtask(() {
-        ref.read(buildProvider.notifier).run(widget.url);
+        // ref.read(buildProvider.notifier).run(widget.url);
+        _handleRun(context);
       });
     }
   }
@@ -573,7 +574,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> with SingleTi
             ),
             const SizedBox(height: 16),
             Text(
-              'The last build was completed successfully.\nAll tests passed and the code is ready to deploy.',
+              'The last build was completed successfully.',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.7),
                 fontSize: 16,
