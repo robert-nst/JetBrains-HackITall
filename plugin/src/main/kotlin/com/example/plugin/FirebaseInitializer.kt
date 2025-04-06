@@ -12,7 +12,7 @@ object FirebaseInitializer {
 
     fun initFirebase() {
         if (!initialized) {
-            val serviceAccount = FileInputStream("C:\\Users\\alexn\\Desktop\\JetBrains-HackITall\\plugin\\src\\main\\resources\\serviceAccountKey.json")
+            val serviceAccount = FileInputStream("C:\\Users\\napru\\OneDrive\\Desktop\\JetBrains-HackITall\\plugin\\src\\main\\resources\\serviceAccountKey.json")
 
             val options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))

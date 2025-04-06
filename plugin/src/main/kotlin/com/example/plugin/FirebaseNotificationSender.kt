@@ -16,7 +16,7 @@ object FirebaseNotificationSender {
     private val client = OkHttpClient()
 
     private fun getAccessToken(): String {
-        val serviceAccountStream = FileInputStream("C:\\Users\\alexn\\Desktop\\JetBrains-HackITall\\plugin\\src\\main\\resources\\serviceAccountKey.json")
+        val serviceAccountStream = FileInputStream("C:\\Users\\napru\\OneDrive\\Desktop\\JetBrains-HackITall\\plugin\\src\\main\\resources\\serviceAccountKey.json")
         val googleCredentials = GoogleCredentials
             .fromStream(serviceAccountStream)
             .createScoped(listOf(SCOPE))

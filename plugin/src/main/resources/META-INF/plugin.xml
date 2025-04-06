@@ -4,7 +4,7 @@
     <name>Tunnel</name>
     <vendor email="napruiuandrei@tunnel.com" url="https://www.tunnel.com">Tunnel SRL</vendor>
     <description><![CDATA[
-    Program on the Go is an IntelliJ plugin designed to streamline your development workflow by enabling you to remotely build and monitor your Java applications from anywhere. Paired seamlessly with a Flutter mobile app, it generates secure public URLs and QR codes through ngrok, allowing instant access to real-time build statuses. If a build fails, Program on the Go leverages OpenAI's powerful language models to provide simplified error summaries, practical solutions, and can even apply suggested fixes directly to your codebase—saving you valuable time and effort.
+    Tunnel is an IntelliJ plugin designed to streamline your development workflow by enabling you to remotely build and monitor your Java applications from anywhere. Paired seamlessly with a Flutter mobile app, it generates secure public URLs and QR codes through ngrok, allowing instant access to real-time build statuses. If a build fails, Tunnel leverages OpenAI's powerful language models to provide simplified error summaries, practical solutions, and can even apply suggested fixes directly to your codebase—saving you valuable time and effort.
   ]]></description>
     <depends>com.intellij.modules.platform</depends>
 
@@ -13,7 +13,7 @@
         <postStartupActivity implementation="com.example.plugin.PluginStartupActivity"/>
         <!-- Register your tool window on the right side -->
         <toolWindow factoryClass="com.example.plugin.MyToolWindowFactory"
-                    id="Program on The Go"
+                    id="Tunnel"
                     anchor="right"
                     secondary="false"/>
     </extensions>
