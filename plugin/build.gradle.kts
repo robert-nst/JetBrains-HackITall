@@ -23,7 +23,7 @@ dependencies {
 
     // ZXing for QR code generation
     implementation("com.google.zxing:core:3.5.0")
-    // Gson for JSON conversion
+
     implementation("com.google.code.gson:gson:2.8.9")
 
     implementation("io.github.cdimascio:dotenv-java:2.2.0")
@@ -31,6 +31,8 @@ dependencies {
     implementation("org.json:json:20230618")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    implementation("com.google.firebase:firebase-admin:9.2.0")
 }
 
 // Configure Gradle IntelliJ Plugin

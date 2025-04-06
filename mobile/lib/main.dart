@@ -7,6 +7,11 @@ import 'package:mobile/data/provider/connection_provider.dart';
 import 'package:mobile/presentation/connect_screen.dart';
 import 'package:mobile/firebase_options.dart';
 import 'package:mobile/presentation/connected_screen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
+  print('🔙 Background message received: ${message.messageId}');
+}
 
 void main() async {
 
@@ -18,6 +23,8 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
 
   String? savedUrl = await ConnectionStorage.getSavedUrl();
 
