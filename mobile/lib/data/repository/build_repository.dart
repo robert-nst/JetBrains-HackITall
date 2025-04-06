@@ -50,4 +50,23 @@ class BuildRepository {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> requestFix(String baseUrl) async {
+    final url = Uri.parse('$baseUrl/getFix');
+    logger.d('Sending fix request to: $url');
+
+    try {
+      final response = await http.get(url).timeout(const Duration(seconds: 20));
+      logger.d('Fix response status: ${response.statusCode}');
+      
+      final data = jsonDecode(response.body);
+      return Map<String, dynamic>.from(data);
+    } on TimeoutException {
+      logger.e('AI fix request timed out');
+      return null;
+    } catch (e) {
+      logger.e('AI fix request error: $e');
+      return null;
+    }
+  }
 }

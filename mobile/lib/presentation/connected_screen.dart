@@ -4,6 +4,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/data/connection_storage.dart';
 import 'package:mobile/data/domain/connection_status.dart';
+import 'package:mobile/presentation/build_error_details_page.dart';
 import 'package:mobile/utils/app_constants.dart';
 import 'package:mobile/utils/dialog_widgets.dart';
 import '../data/provider/connection_provider.dart';
@@ -72,6 +73,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
 
         await Future.delayed(const Duration(seconds: 3));
         await ConnectionStorage.clearConnectedUrl();
+        ref.read(buildProvider.notifier).reset();
         navigateAndRemoveAll(context, const ConnectScreen());
       });
     }
@@ -143,7 +145,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
                       children: [
                         if (buildStatus == 'failure') ...[
                           ElevatedButton(
-                            onPressed: () => (),
+                            onPressed: () => navigateTo(context, BuildErrorDetailsPage(buildData: buildData, baseUrl: widget.url)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                             ),
@@ -195,6 +197,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
     _manualDisconnect = true;
     await ConnectionStorage.clearConnectedUrl();
     ref.read(connectionStatusProvider.notifier).stop();
+    ref.read(buildProvider.notifier).reset();
     navigateAndRemoveAll(context, const ConnectScreen());
   }
 }

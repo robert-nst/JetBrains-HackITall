@@ -66,6 +66,10 @@ class BuildNotifier extends StateNotifier<Map<String, dynamic>?> {
     state = data;
   }
 
+  void reset() {
+    state = null;
+  }
+
   @override
   void dispose() {
     _pollTimer?.cancel();
