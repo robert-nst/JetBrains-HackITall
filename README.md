@@ -1,13 +1,14 @@
-# Program on the Go Plugin
+# Tunnel Plugin
 
 <div style="display: flex; align-items: center;">
   <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" alt="JetBrains Logo" style="height: 50px; margin-right: 20px;">
-  <img src="mobile/assets/app_icon.png" alt="Our Logo" style="height: 30px;">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="mobile/assets/app_icon.png" alt="Our Logo" style="height: 50px;">
 </div>
 
 ## Overview
 
-**Program on the Go** is an IntelliJ plugin that creates an embedded server every time a new IDE instance is launched. When the server is running, the plugin displays a public URL (generated via **ngrok**) and a corresponding QR code in the side toolbar.
+**Tunnel** is an IntelliJ plugin that creates an embedded server every time a new IDE instance is launched. When the server is running, the plugin displays a public URL (generated via **ngrok**) and a corresponding QR code in the side toolbar.
 
 Using our dedicated Flutter mobile app, you can scan the QR code to trigger remote builds. If a build fails, the plugin utilizes the **OpenAI API** to analyze the error output, provide a simplified explanation, and generate a potential solution. The plugin can then automatically apply code modifications and allows you to rerun the build cycle until a successful build is achieved.
 
