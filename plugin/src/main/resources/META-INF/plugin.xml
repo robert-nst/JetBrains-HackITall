@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <idea-plugin>
     <id>com.example.plugin</id>
-    <name>Plugin</name>
-    <vendor email="napruiuandrei@yourcompany.com" url="https://www.napruiu.com">compania mea</vendor>
+    <name>Tunnel</name>
+    <vendor email="napruiuandrei@tunnel.com" url="https://www.tunnel.com">Tunnel SRL</vendor>
     <description><![CDATA[
-    Ceva descriere la misto. O descriere de minim 40 de caractere.
+    Program on the Go is an IntelliJ plugin designed to streamline your development workflow by enabling you to remotely build and monitor your Java applications from anywhere. Paired seamlessly with a Flutter mobile app, it generates secure public URLs and QR codes through ngrok, allowing instant access to real-time build statuses. If a build fails, Program on the Go leverages OpenAI's powerful language models to provide simplified error summaries, practical solutions, and can even apply suggested fixes directly to your codebase—saving you valuable time and effort.
   ]]></description>
     <depends>com.intellij.modules.platform</depends>
 
