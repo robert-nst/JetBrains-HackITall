@@ -84,6 +84,17 @@ flutter:
     - assets/images/
     - assets/images/finexa/
     - assets/
+    - assets/jetbrains.svg
+    - assets/splash_icon.svg
+    - assets/product-logos/intellij-idea.png
+    - assets/product-logos/pycharm.png
+    - assets/product-logos/webstorm.png
+    - assets/product-logos/phpstorm.png
+    - assets/product-logos/rider.png
+    - assets/product-logos/clion.png
+    - assets/product-logos/goland.png
+    - assets/product-logos/rubymine.png
+    - assets/product-logos/datagrip.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
