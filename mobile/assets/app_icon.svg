@@ -12,8 +12,8 @@
         </filter>
     </defs>
 
-    <!-- Background Square with rounded corners -->
-    <rect x="0" y="0" width="1024" height="1024" rx="80" fill="url(#gradient)" />
+    <!-- Background Square -->
+    <rect x="0" y="0" width="1024" height="1024" fill="url(#gradient)" />
 
     <!-- Network Lines with enhanced visibility -->
     <path d="M512 384 L384 512 L512 640 L640 512 Z" 
@@ -31,7 +31,7 @@
     <circle cx="512" cy="640" r="28" fill="white" filter="url(#glow)" />
 
     <!-- Inner Glow -->
-    <rect x="0" y="0" width="1024" height="1024" rx="80"
+    <rect x="0" y="0" width="1024" height="1024" 
           stroke="white" 
           stroke-width="4" 
           fill="none" 

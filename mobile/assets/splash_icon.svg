@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="containerGradient" x1="112" y1="112" x2="912" y2="912" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#2A2A2A"/>
+            <stop offset="1" stop-color="#1E1E1E"/>
+        </linearGradient>
+        <filter id="containerGlow" x="92" y="92" width="840" height="840" filterUnits="userSpaceOnUse">
+            <feGaussianBlur stdDeviation="10" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#FF6B00" flood-opacity="0.3"/>
+            <feDropShadow dx="0" dy="-4" stdDeviation="10" flood-color="#FF00FF" flood-opacity="0.3"/>
+        </filter>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+        <filter id="dotGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+    </defs>
+
+    <!-- Container with rounded corners -->
+    <g filter="url(#containerGlow)">
+        <rect x="112" y="112" width="800" height="800" rx="80" fill="url(#containerGradient)"/>
+    </g>
+
+    <!-- Network Lines Pattern -->
+    <g opacity="0.4" filter="url(#glow)">
+        <!-- Vertical Lines -->
+        <path d="M362 262 L362 762" stroke="white" stroke-width="4"/>
+        <path d="M662 262 L662 762" stroke="white" stroke-width="4"/>
+        <!-- Horizontal Lines -->
+        <path d="M262 362 L762 362" stroke="white" stroke-width="4"/>
+        <path d="M262 662 L762 662" stroke="white" stroke-width="4"/>
+        <!-- Diagonal Lines -->
+        <path d="M312 312 L712 712" stroke="white" stroke-width="4"/>
+        <path d="M312 712 L712 312" stroke="white" stroke-width="4"/>
+    </g>
+
+    <!-- Connection Dots -->
+    <g filter="url(#dotGlow)">
+        <!-- Corner Dots -->
+        <circle cx="362" cy="362" r="8" fill="white"/>
+        <circle cx="362" cy="662" r="8" fill="white"/>
+        <circle cx="662" cy="362" r="8" fill="white"/>
+        <circle cx="662" cy="662" r="8" fill="white"/>
+        <!-- Center Dot -->
+        <circle cx="512" cy="512" r="12" fill="white"/>
+    </g>
+</svg> 
