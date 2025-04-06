@@ -15,8 +15,9 @@ import 'connect_screen.dart';
 
 class ConnectedScreen extends ConsumerStatefulWidget {
   final String url;
+  final bool autoRunBuild;
 
-  const ConnectedScreen({super.key, required this.url});
+  const ConnectedScreen({super.key, required this.url, this.autoRunBuild = false});
 
   @override
   ConsumerState<ConnectedScreen> createState() => _ConnectedScreenState();
@@ -44,6 +45,12 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> with SingleTi
       // Fetch build status once on screen load
       _fetchInitialBuildStatus();
     });
+
+    if (widget.autoRunBuild) {
+      Future.microtask(() {
+        ref.read(buildProvider.notifier).run(widget.url);
+      });
+    }
   }
 
   @override

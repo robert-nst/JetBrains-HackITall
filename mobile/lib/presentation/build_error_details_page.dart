@@ -78,7 +78,7 @@ class BuildErrorDetailsPage extends StatelessWidget {
 
     if (result != null && result['success'] == true) {
       Navigator.pop(context); // close loading dialog
-      navigateTo(context, FixSuggestionPage(fixData: result));
+      navigateTo(context, FixSuggestionPage(initialFixData: result, baseUrl: baseUrl));
     } else {
       Navigator.pop(context); // close loading dialog
       errorDialog(context, "Could not fetch fix suggestions.");

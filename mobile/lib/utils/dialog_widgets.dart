@@ -54,6 +54,22 @@ void successDialog(BuildContext context, String message) {
   );
 }
 
+void successDialogWithFunction(BuildContext context, String message, String buttonText, {VoidCallback? onConfirm}) {
+  CoolAlert.show(
+    context: context,
+    barrierDismissible: false,
+    type: CoolAlertType.success,
+    backgroundColor: Colors.greenAccent.withOpacity(0.2),
+    confirmBtnColor: const Color.fromARGB(255, 73, 186, 143),
+    confirmBtnText: buttonText,
+    title: message,
+    titleTextStyle: const TextStyle(
+      fontWeight: FontWeight.w600,
+    ),
+    onConfirmBtnTap: onConfirm,
+  );
+}
+
 void errorDialog(BuildContext context, String message) {
   CoolAlert.show(
     context: context,

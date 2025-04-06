@@ -69,4 +69,23 @@ class BuildRepository {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> applyFix(String baseUrl) async {
+    final url = Uri.parse('$baseUrl/doFix');
+    logger.d('Sending fix apply request to: $url');
+
+    try {
+      final response = await http.post(url).timeout(const Duration(seconds: 20));
+      logger.d('Fix apply response: ${response.statusCode}');
+
+      final data = jsonDecode(response.body);
+      return Map<String, dynamic>.from(data);
+    } on TimeoutException {
+      logger.e('AI do fix request timed out');
+      return null;
+    } catch (e) {
+      logger.e('AI do fix request error: $e');
+      return null;
+    }
+  }
 }
