@@ -44,7 +44,9 @@ dependencies:
   mobile_scanner: ^3.5.2
   cool_alert: ^2.0.1
   firebase_core: ^3.13.0
-  flutter_native_splash: ^2.4.3
+  flutter_native_splash: ^2.4.0
+  flutter_svg: ^2.0.9
+  flutter_launcher_icons: ^0.14.3
 
 dev_dependencies:
   flutter_test:
@@ -60,9 +62,12 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: true
-  image_path_android: "assets/images/finexa/launcher.png"
-  adaptive_icon_background: "#d5dde2" # only available for Android 8.0 devices and above
-  adaptive_icon_foreground: "assets/images/finexa/launcher_foreground.png" # only available for Android 8.0 devices and above
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/app_icon.png"
+  adaptive_icon_background: "#1E1E1E"
+  adaptive_icon_foreground: "assets/app_icon.png"
+  min_sdk_android: 21
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -79,6 +84,7 @@ flutter:
     # Add assets from the images directory to the application.
     - assets/images/
     - assets/images/finexa/
+    - assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
