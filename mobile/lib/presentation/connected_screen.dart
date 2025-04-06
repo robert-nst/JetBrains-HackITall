@@ -121,7 +121,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
                       ),
                     ] else ...[
                       Text(
-                        'Last build details: $buildStatus',
+                        'Last build details:',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       if (buildStatus == 'idle') ...[
