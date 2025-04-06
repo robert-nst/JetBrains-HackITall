@@ -69,4 +69,37 @@ class BuildRepository {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> saveCodeChanges(String baseUrl, List<String> codeLines, int lineNumber) async {
+    final url = Uri.parse('$baseUrl/saveCodeChanges');
+    logger.d('Sending code changes to: $url');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'codeLines': codeLines,
+          'lineNumber': lineNumber,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      logger.d('Save code changes response status: ${response.statusCode}');
+      
+      final data = jsonDecode(response.body);
+      return Map<String, dynamic>.from(data);
+    } on TimeoutException {
+      logger.e('Save code changes request timed out');
+      return {
+        'success': false,
+        'message': 'Request timed out. Please try again.'
+      };
+    } catch (e) {
+      logger.e('Error saving code changes: $e');
+      return {
+        'success': false,
+        'message': 'An error occurred while saving changes.'
+      };
+    }
+  }
 }

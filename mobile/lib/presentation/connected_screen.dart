@@ -7,6 +7,7 @@ import 'package:mobile/data/domain/connection_status.dart';
 import 'package:mobile/presentation/components/jetbrains_confetti.dart';
 import 'package:mobile/presentation/build_error_details_page.dart';
 import 'package:mobile/utils/app_constants.dart';
+import 'package:mobile/utils/custom_painters.dart';
 import 'package:mobile/utils/dialog_widgets.dart';
 import 'package:mobile/utils/jetbrains_brand_theme.dart';
 import '../data/provider/connection_provider.dart';
@@ -81,8 +82,62 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> with SingleTi
 
     // If build data was not retrieved yet, show loading indicator
     if (buildData == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: JetBrandTheme.backgroundDark,
+        body: Stack(
+          children: [
+            // Animated Background
+            AnimatedBuilder(
+              animation: _backgroundAnimationController,
+              builder: (context, child) {
+                return CustomPaint(
+                  size: Size(size.width, size.height),
+                  painter: GlowingGradientPainter(
+                    touchPoint: _touchPoint,
+                    touchRadius: _touchRadius,
+                    animationValue: _backgroundAnimationController.value,
+                  ),
+                );
+              },
+            ),
+            // Loading Content
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      JetBrandTheme.surfaceDark.withOpacity(0.9),
+                      JetBrandTheme.surfaceDark.withOpacity(0.7),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: JetBrandTheme.orangeMiddle.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const CircularProgressIndicator(
+                        color: JetBrandTheme.orangeMiddle,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
