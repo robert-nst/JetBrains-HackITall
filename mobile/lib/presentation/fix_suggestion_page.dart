@@ -339,7 +339,7 @@ class _FixSuggestionPageState extends ConsumerState<FixSuggestionPage> {
                                               return const SizedBox.shrink();
                                             }
                                             
-                                            final isHighlighted = affectedLines.contains(i + 1);
+                                            final isHighlighted = affectedLines.contains(i);
                                             return Row(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
