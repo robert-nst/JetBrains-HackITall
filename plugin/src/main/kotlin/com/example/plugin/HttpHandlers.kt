@@ -121,20 +121,22 @@ class GetStatusHandler : HttpHandler {
             val logs = EmbeddedServerHttp.getLastLogs()
             EmbeddedServerHttp.lastBuildMessage = logs
             val responseMap = mutableMapOf<String, Any>(
-                "status" to status,
+                "status" to status
             )
 
             if (status == "failure") {
                 try {
                     val summary = OpenAIClient.summarizeErrorWithContext(logs)
-
                     val projectBasePath = EmbeddedServerHttp.currentProject?.basePath
                         ?: throw IllegalStateException("No project available")
 
-                    // 🧠 Normalize path: if absolute, use as-is; if relative, resolve from base path
+                    // Normalize the path: if absolute, use as-is; if relative, resolve from base path.
                     val file = File(summary.file).let { f ->
                         if (f.isAbsolute) f else File(projectBasePath, summary.file)
                     }
+
+                    // Include the absolute path in the response, regardless of file existence.
+                    responseMap["absoluteFilePath"] = file.absolutePath
 
                     if (!file.exists()) {
                         throw IllegalStateException("File not found: ${file.path}")
@@ -142,7 +144,6 @@ class GetStatusHandler : HttpHandler {
 
                     val lines = file.readLines()
                     val errorLineIndex = summary.line - 1
-
                     val contextMap = mapOf(
                         "line" to summary.line,
                         "before" to lines.subList((errorLineIndex - 5).coerceAtLeast(0), errorLineIndex),
@@ -162,7 +163,6 @@ class GetStatusHandler : HttpHandler {
 
             val json = Gson().toJson(responseMap)
             val responseBytes = json.toByteArray(StandardCharsets.UTF_8)
-
             exchange.responseHeaders.add("Content-Type", "application/json")
             exchange.sendResponseHeaders(200, responseBytes.size.toLong())
             exchange.responseBody.write(responseBytes)
