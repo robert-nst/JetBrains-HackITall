@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:flutter_highlight/themes/darcula.dart';
 import 'package:mobile/data/repository/build_repository.dart';
 import 'package:mobile/presentation/fix_suggestion_page.dart';
 import 'package:mobile/utils/app_constants.dart';
@@ -432,7 +430,7 @@ class _BuildErrorDetailsPageState extends State<BuildErrorDetailsPage> {
 
     if (result != null && result['success'] == true) {
       Navigator.pop(context); // close loading dialog
-      navigateTo(context, FixSuggestionPage(initialFixData: result, baseUrl: baseUrl));
+      navigateTo(context, FixSuggestionPage(initialFixData: result, baseUrl: widget.baseUrl));
     } else {
       Navigator.pop(context); // close loading dialog
       errorDialog(context, "Could not fetch fix suggestions.");
