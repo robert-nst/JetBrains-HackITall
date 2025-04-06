@@ -118,7 +118,7 @@ class _ConnectScreenState extends ConsumerState<ConnectScreen> {
 
     if (success) {
       await ConnectionStorage.saveConnectedUrl(url);
-      navigateAndReplace(context, ConnectedScreen(url: url));
+      navigateAndRemoveAll(context, ConnectedScreen(url: url));
     } else {
       Navigator.pop(context); // Close loading dialog
       errorDialog(context, "Could not connect to the server.");
