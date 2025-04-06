@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/data/connection_storage.dart';
 import 'package:mobile/data/domain/connection_status.dart';
+import 'package:mobile/data/repository/connection_repository.dart';
 import 'package:mobile/presentation/components/jetbrains_confetti.dart';
 import 'package:mobile/presentation/build_error_details_page.dart';
 import 'package:mobile/utils/app_constants.dart';
@@ -35,6 +37,9 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> with SingleTi
   @override
   void initState() {
     super.initState();
+
+    _initFirebaseMessaging();
+
     _backgroundAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 40),
@@ -52,6 +57,31 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> with SingleTi
         ref.read(buildProvider.notifier).run(widget.url);
       });
     }
+  }
+
+  void _initFirebaseMessaging() async {
+    // Request permission (good practice even on Android)
+    await FirebaseMessaging.instance.requestPermission();
+
+    // Get the FCM token and print it
+    final token = await FirebaseMessaging.instance.getToken();
+    print("📲 FCM Token: $token");
+
+    // TODO: Send the token to your server if needed
+    final url = widget.url; // e.g. https://abcd.ngrok-free.app
+    await ConnectionRepository().sendFcmToken(url, token!);
+
+    // Listen for messages when the app is in foreground
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("📥 Foreground message: ${message.notification?.title}");
+      // Optionally show a snackbar or custom alert
+    });
+
+    // Handle taps on notifications that open the app
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print("🚀 Notification tapped and app opened");
+      // You can navigate here if needed
+    });
   }
 
   @override
