@@ -4,6 +4,7 @@ import com.example.plugin.EmbeddedServerHttp
 import com.example.plugin.EmbeddedServerHttp.BuildStatus
 import com.example.plugin.OpenAIClient
 import com.example.plugin.models.*
+import com.example.plugin.handlers.FirebaseNotificationSender
 import com.google.gson.Gson
 import com.intellij.execution.ExecutionManager
 import com.intellij.execution.RunManager
@@ -64,20 +65,42 @@ class RunApplicationHandler : HttpHandler {
 
                                             if (text.contains("Tomcat started on port", ignoreCase = true)) {
                                                 EmbeddedServerHttp.currentBuildStatus = BuildStatus.SUCCESS
+
+                                                FirebaseNotificationSender.sendNotification(
+                                                    title = "✅ Build Success",
+                                                    body = "Your application built successfully.",
+                                                    deviceToken = "<DEVICE_TOKEN>"
+                                                )
                                             }
                                         }
 
                                         override fun processTerminated(event: ProcessEvent) {
-                                            if (EmbeddedServerHttp.currentBuildStatus == BuildStatus.RUNNING) {
-                                                val status = if (event.exitCode == 0) BuildStatus.SUCCESS else BuildStatus.FAILURE
-                                                EmbeddedServerHttp.currentBuildStatus = status
-                                            }
+                                            val status = if (event.exitCode == 0)
+                                                BuildStatus.SUCCESS
+                                            else
+                                                BuildStatus.FAILURE
+
+                                            EmbeddedServerHttp.currentBuildStatus = status
                                             EmbeddedServerHttp.log("[APP] Process terminated with exit code: ${event.exitCode}")
+
+                                            if (status == BuildStatus.FAILURE) {
+                                                FirebaseNotificationSender.sendNotification(
+                                                    title = "❌ Build Failure",
+                                                    body = "Your application failed to build. Check details.",
+                                                    deviceToken = "<DEVICE_TOKEN>"
+                                                )
+                                            }
                                         }
                                     })
                                 } else {
                                     EmbeddedServerHttp.currentBuildStatus = BuildStatus.FAILURE
                                     EmbeddedServerHttp.log("[APP] Failed to obtain process handler.")
+
+                                    FirebaseNotificationSender.sendNotification(
+                                        title = "❌ Build Error",
+                                        body = "Could not start the build process.",
+                                        deviceToken = "<DEVICE_TOKEN>"
+                                    )
                                 }
                             }
                         }
@@ -294,6 +317,40 @@ class StatusHandler : HttpHandler {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            exchange.sendResponseHeaders(500, -1)
+        } finally {
+            exchange.close()
+        }
+    }
+}
+
+class UpdateFCMTokenHandler : HttpHandler {
+    override fun handle(exchange: HttpExchange) {
+        if (!exchange.requestMethod.equals("POST", ignoreCase = true)) {
+            exchange.sendResponseHeaders(405, -1)
+            exchange.close()
+            return
+        }
+
+        try {
+            val body = exchange.requestBody.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+            val gson = Gson()
+            val request = gson.fromJson(body, FCMTokenRequest::class.java)
+
+            if (request.token.isNotBlank()) {
+                EmbeddedServerHttp.fcmDeviceToken = request.token
+                val response = """{"success": true, "message": "FCM token updated successfully."}"""
+                exchange.sendResponseHeaders(200, response.length.toLong())
+                exchange.responseHeaders.add("Content-Type", "application/json")
+                exchange.responseBody.write(response.toByteArray())
+            } else {
+                val response = """{"success": false, "message": "Invalid token."}"""
+                exchange.sendResponseHeaders(400, response.length.toLong())
+                exchange.responseHeaders.add("Content-Type", "application/json")
+                exchange.responseBody.write(response.toByteArray())
+            }
+        } catch (ex: Exception) {
+            ex.printStackTrace()
             exchange.sendResponseHeaders(500, -1)
         } finally {
             exchange.close()
