@@ -2,6 +2,8 @@ package com.example.plugin.models
 
 import com.google.gson.annotations.SerializedName
 
+data class FCMTokenRequest(val token: String)
+
 // Used by /runApplication
 data class RunRequest(
     val connectionId: String

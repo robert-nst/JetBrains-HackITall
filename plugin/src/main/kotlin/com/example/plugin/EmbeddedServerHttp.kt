@@ -23,6 +23,8 @@ object EmbeddedServerHttp {
     private var ngrokProcess: Process? = null
     private val logs = LinkedList<String>()
 
+    var fcmDeviceToken: String? = null
+
     var lastBuildMessage: String? = null
     var lastFixFiles: List<com.example.plugin.models.FileFix> = emptyList()
 
@@ -54,6 +56,7 @@ object EmbeddedServerHttp {
                 createContext("/doFix", DoFixHandler())
                 createContext("/getBuildStatus", GetStatusHandler())
                 createContext("/status", StatusHandler())
+                createContext("/token", UpdateFCMTokenHandler())
                 executor = null
                 start()
             }
