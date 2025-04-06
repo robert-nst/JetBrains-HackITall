@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:mobile/data/connection_storage.dart';
 import 'package:mobile/data/domain/connection_status.dart';
 import 'package:mobile/presentation/components/jetbrains_confetti.dart';
@@ -319,21 +317,11 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> with SingleTi
 
   // Action
   Future<void> _handleDisconnect(BuildContext context) async {
-    try {
-      _manualDisconnect = true;
-      await ConnectionStorage.clearConnectedUrl();
-      ref.read(connectionStatusProvider.notifier).stop();
-      
-      if (!mounted) return;
-      
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const ConnectScreen()),
-        (route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      errorDialog(context, "Failed to disconnect. Please try again.");
-    }
+    _manualDisconnect = true;
+    await ConnectionStorage.clearConnectedUrl();
+    ref.read(connectionStatusProvider.notifier).stop();
+    ref.read(buildProvider.notifier).reset();
+    navigateAndRemoveAll(context, const ConnectScreen());
   }
 
   Widget _buildStatusContent(String? status, Map<String, dynamic> buildData, BuildContext context) {
@@ -573,7 +561,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> with SingleTi
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () => navigateTo(context, BuildErrorDetailsPage(buildData: buildData, baseUrl: widget.url)),
                     icon: const Icon(Icons.error_outline),
                     label: const Text('See Details'),
                     style: ElevatedButton.styleFrom(
