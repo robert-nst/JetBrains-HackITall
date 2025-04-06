@@ -16,6 +16,7 @@ import com.intellij.openapi.util.Key
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import java.io.File
+import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 
 class GenerateQRHandler : HttpHandler {
@@ -110,21 +111,61 @@ class RunApplicationHandler : HttpHandler {
 class GetStatusHandler : HttpHandler {
     override fun handle(exchange: HttpExchange) {
         try {
-            if (exchange.requestMethod.equals("GET", ignoreCase = true)) {
-                val gson = Gson()
-                val json = gson.toJson(
-                    mapOf(
-                        "status" to EmbeddedServerHttp.currentBuildStatus.name.lowercase(),
-                        "logs" to EmbeddedServerHttp.getLastLogs()
-                    )
-                )
-                val responseBytes = json.toByteArray(StandardCharsets.UTF_8)
-                exchange.responseHeaders.add("Content-Type", "application/json")
-                exchange.sendResponseHeaders(200, responseBytes.size.toLong())
-                exchange.responseBody.write(responseBytes)
-            } else {
+            if (!exchange.requestMethod.equals("GET", ignoreCase = true)) {
                 exchange.sendResponseHeaders(405, -1)
+                exchange.close()
+                return
             }
+
+            val status = EmbeddedServerHttp.currentBuildStatus.name.lowercase()
+            val logs = EmbeddedServerHttp.getLastLogs()
+            EmbeddedServerHttp.lastBuildMessage = logs
+            val responseMap = mutableMapOf<String, Any>(
+                "status" to status,
+            )
+
+            if (status == "failure") {
+                try {
+                    val summary = OpenAIClient.summarizeErrorWithContext(logs)
+
+                    val projectBasePath = EmbeddedServerHttp.currentProject?.basePath
+                        ?: throw IllegalStateException("No project available")
+
+                    // 🧠 Normalize path: if absolute, use as-is; if relative, resolve from base path
+                    val file = File(summary.file).let { f ->
+                        if (f.isAbsolute) f else File(projectBasePath, summary.file)
+                    }
+
+                    if (!file.exists()) {
+                        throw IllegalStateException("File not found: ${file.path}")
+                    }
+
+                    val lines = file.readLines()
+                    val errorLineIndex = summary.line - 1
+
+                    val contextMap = mapOf(
+                        "line" to summary.line,
+                        "before" to lines.subList((errorLineIndex - 5).coerceAtLeast(0), errorLineIndex),
+                        "error" to lines.getOrNull(errorLineIndex).orEmpty(),
+                        "after" to lines.subList(errorLineIndex + 1, (errorLineIndex + 6).coerceAtMost(lines.size))
+                    )
+
+                    responseMap["errorMessage"] = summary.message
+                    responseMap["errorCode"] = contextMap
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    responseMap["errorMessage"] = "Could not extract error context: ${e.message}"
+                    responseMap["errorCode"] = ""
+                }
+            }
+
+            val json = Gson().toJson(responseMap)
+            val responseBytes = json.toByteArray(StandardCharsets.UTF_8)
+
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.sendResponseHeaders(200, responseBytes.size.toLong())
+            exchange.responseBody.write(responseBytes)
         } catch (e: Exception) {
             e.printStackTrace()
             exchange.sendResponseHeaders(500, -1)
@@ -137,32 +178,31 @@ class GetStatusHandler : HttpHandler {
 class GetFixHandler : HttpHandler {
     override fun handle(exchange: HttpExchange) {
         try {
-            if (exchange.requestMethod.equals("POST", ignoreCase = true)) {
-                val gson = Gson()
-                val requestBody = exchange.requestBody.bufferedReader().readText()
-                val getFixRequest = gson.fromJson(requestBody, GetFixRequest::class.java)
-
-                val buildMessage = getFixRequest.buildMessage
-                if (buildMessage.isBlank()) {
-                    respond(exchange, GetFixResponse(false, emptyList(), "Build message is missing"))
-                    return
-                }
-
-                val project = EmbeddedServerHttp.currentProject ?: run {
-                    respond(exchange, GetFixResponse(false, emptyList(), "No project available"))
-                    return
-                }
-
-                val sourceFiles = mutableMapOf<String, String>()
-                val base = File(project.basePath!!)
-                base.walkTopDown().filter { it.isFile && it.extension in listOf("java", "kt") }
-                    .forEach { sourceFiles[it.relativeTo(base).path] = it.readText() }
-
-                val files = OpenAIClient.getFixesFromOpenAI(buildMessage, sourceFiles)
-                respond(exchange, com.example.plugin.GetFixResponse(true, files))
-            } else {
+            if (!exchange.requestMethod.equals("GET", ignoreCase = true)) {
                 exchange.sendResponseHeaders(405, -1)
+                return
             }
+
+            val buildMessage = EmbeddedServerHttp.lastBuildMessage ?: run {
+                respond(exchange, GetFixResponse(false, emptyList(), "No build message available"))
+                return
+            }
+
+            val project = EmbeddedServerHttp.currentProject ?: run {
+                respond(exchange, GetFixResponse(false, emptyList(), "No project available"))
+                return
+            }
+
+            val sourceFiles = mutableMapOf<String, String>()
+            val base = File(project.basePath!!)
+            base.walkTopDown()
+                .filter { it.isFile && it.extension in listOf("java", "kt") }
+                .forEach { sourceFiles[it.relativeTo(base).path] = it.readText() }
+
+            val files = OpenAIClient.getFixesFromOpenAI(buildMessage, sourceFiles)
+            EmbeddedServerHttp.lastFixFiles = files
+            respond(exchange, GetFixResponse(true, files))
+
         } catch (e: Exception) {
             e.printStackTrace()
             respond(exchange, GetFixResponse(false, emptyList(), e.message))
@@ -174,6 +214,70 @@ class GetFixHandler : HttpHandler {
     private fun respond(exchange: HttpExchange, response: Any, code: Int = 200) {
         val json = Gson().toJson(response)
         val bytes = json.toByteArray()
+        exchange.responseHeaders.add("Content-Type", "application/json")
+        exchange.sendResponseHeaders(code, bytes.size.toLong())
+        exchange.responseBody.use { it.write(bytes) }
+    }
+}
+
+class DoFixHandler : HttpHandler {
+    override fun handle(exchange: HttpExchange) {
+        try {
+            if (!exchange.requestMethod.equals("POST", ignoreCase = true)) {
+                exchange.sendResponseHeaders(405, -1)
+                return
+            }
+
+            val files = EmbeddedServerHttp.lastFixFiles
+            println(files)
+            if (files.isEmpty()) {
+                respond(exchange, DoFixResponse(false, emptyList(), "No fix data available"))
+                return
+            }
+
+            val project = EmbeddedServerHttp.currentProject ?: run {
+                respond(exchange, DoFixResponse(false, emptyList(), "No project available"))
+                return
+            }
+
+            val updatedFiles = mutableListOf<String>()
+
+            files.forEach { fileFix ->
+                try {
+                    val file = File(fileFix.path)
+                    if (!file.exists()) {
+                        file.parentFile.mkdirs()
+                        file.createNewFile()
+                    }
+
+                    val cleanedCode = fileFix.code
+                        .replace("```java", "")
+                        .replace("```kotlin", "")
+                        .replace("```kt", "")
+                        .replace("```", "")
+                        .trim()
+
+                    file.writeText(cleanedCode)
+                    updatedFiles.add(file.absolutePath)
+                } catch (e: Exception) {
+                    respond(exchange, DoFixResponse(false, updatedFiles, "Error writing ${fileFix.path}: ${e.message}"))
+                    return
+                }
+            }
+
+            respond(exchange, DoFixResponse(true, updatedFiles))
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            respond(exchange, DoFixResponse(false, emptyList(), "Exception: ${e.message}"))
+        } finally {
+            exchange.close()
+        }
+    }
+
+    private fun respond(exchange: HttpExchange, response: DoFixResponse, code: Int = 200) {
+        val json = Gson().toJson(response)
+        val bytes = json.toByteArray(Charsets.UTF_8)
         exchange.responseHeaders.add("Content-Type", "application/json")
         exchange.sendResponseHeaders(code, bytes.size.toLong())
         exchange.responseBody.use { it.write(bytes) }

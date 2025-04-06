@@ -1,115 +1,122 @@
 package com.example.plugin
 
+import com.example.plugin.models.ErrorSummary
+import com.example.plugin.models.FileFix
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.OutputStream
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.regex.Pattern
 
 object OpenAIClient {
-    private const val OPENAI_API_KEY = "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" // Replace with your key
-    private const val MODEL = "gpt-4" // Or "gpt-3.5-turbo"
+    private const val API_KEY = "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"  // 🔐 put your actual key here
+    private const val API_URL = "https://api.openai.com/v1/chat/completions"
 
-    fun getFixedCode(buildMessage: String): String {
+    fun getFixesFromOpenAI(buildMessage: String, sourceFiles: Map<String, String>): List<FileFix> {
         val prompt = """
-            The following Java project build failed. Analyze the logs and return the corrected version of the codebase. 
-            Only return the full fixed source code. No extra explanations, no extra formatting, no extra output, no extra information before or after writing the code, just the code itself.
-
-            Build Log:
+            You're an expert Java developer. A Spring Boot project failed to build. Your job is to fix the code.
+            Return only the full corrected content for each file that needs to be updated, no explanations.
+            Each file must be in this format:
+            
+            -- START OF FILE: path/to/File.java
+            <full fixed code>
+            -- END OF FILE
+            
+            Exclude any formatting or comments that are not part of the given code. Exclude the ``` characters. Send raw code only, but include all necessary imports, components or dependencies. Don't forget to include the corresponding package name at the top of the file, that you can extract from the original file.
+            
+            Build failure logs:
             $buildMessage
         """.trimIndent()
 
-        val payload = JSONObject()
-        payload.put("model", MODEL)
-        payload.put("messages", listOf(
-            mapOf("role" to "system", "content" to "You're an expert in debugging Java applications."),
+        val body = JSONObject()
+        body.put("model", "gpt-4")
+        body.put("messages", listOf(
+            mapOf("role" to "system", "content" to "You are a code fixer."),
             mapOf("role" to "user", "content" to prompt)
         ))
-        payload.put("temperature", 0.2)
+        body.put("temperature", 0.3)
 
-        val url = URL("https://api.openai.com/v1/chat/completions")
-        val connection = url.openConnection() as HttpURLConnection
+        val requestBody = RequestBody.create(
+            "application/json".toMediaTypeOrNull(),
+            body.toString()
+        )
 
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/json")
-        connection.setRequestProperty("Authorization", "Bearer $OPENAI_API_KEY")
-        connection.doOutput = true
+        val request = Request.Builder()
+            .url(API_URL)
+            .addHeader("Authorization", "Bearer $API_KEY")
+            .post(requestBody)
+            .build()
 
-        val outputStream: OutputStream = connection.outputStream
-        outputStream.write(payload.toString().toByteArray(Charsets.UTF_8))
-        outputStream.flush()
-        outputStream.close()
+        val client = OkHttpClient()
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) throw Exception("OpenAI call failed: ${response.code}")
 
-        val response = StringBuilder()
-        val reader = BufferedReader(connection.inputStream.reader())
-        reader.useLines { lines -> lines.forEach { response.append(it) } }
+        val responseBody = response.body?.string() ?: throw Exception("No response body")
+        val json = JSONObject(responseBody)
+        val text = json.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
 
-        val jsonResponse = JSONObject(response.toString())
-        return jsonResponse
-            .getJSONArray("choices")
-            .getJSONObject(0)
-            .getJSONObject("message")
-            .getString("content")
-            .trim()
+        return parseFileFixes(text)
     }
 
-    fun getFixesFromOpenAI(buildMessage: String, codebase: Map<String, String>): List<FileFix> {
-        val filesJson = codebase.entries.joinToString("\n") { "\"${it.key}\": \"\"\"${it.value}\"\"\"" }
-        val userPrompt = """
-        The Java project failed to build. Here's the error log and source code.
-        Fix the errors and return ONLY JSON with this structure:
-        {
-            "files": [
-                {"filePath": "path/to/File.java", "fixedCode": "full fixed content"},
-                ...
-            ]
-        }
+    private fun parseFileFixes(response: String): List<FileFix> {
+        val pattern = Pattern.compile("-- START OF FILE: (.*?)\\R(.*?)\\R-- END OF FILE", Pattern.DOTALL)
+        val matcher = pattern.matcher(response)
 
-        Build Error Log:
-        $buildMessage
-
-        Files:
-        {
-            $filesJson
+        val files = mutableListOf<FileFix>()
+        while (matcher.find()) {
+            val path = matcher.group(1).trim()
+            val code = matcher.group(2).trim()
+            files.add(FileFix(path, code))
         }
+        return files
+    }
+
+    fun summarizeErrorWithContext(buildLogs: String): ErrorSummary {
+        val prompt = """
+        A Java build has failed. Extract:
+        - A one-line summary of the cause (start with "MESSAGE:")
+        - The source file path where the error happened (start with "FILE:" and extract the absolute path)
+        - The line number where the error occurred (start with "LINE:")
+
+        Example:
+        MESSAGE: Missing semicolon in DemoServerApplication.java at line 12.
+        FILE: C:\\path\\to\\the\\project\\src\\main\\java\\com\\example\\Application.java
+        LINE: 12
+
+        Build logs:
+        $buildLogs
     """.trimIndent()
 
-        val payload = JSONObject()
-        payload.put("model", MODEL)
-        payload.put("messages", listOf(
-            mapOf("role" to "system", "content" to "You're a helpful Java debugging assistant."),
-            mapOf("role" to "user", "content" to userPrompt)
-        ))
-        payload.put("temperature", 0.3)
+        val body = JSONObject()
+        body.put("model", "gpt-4")
+        body.put("messages", listOf(mapOf("role" to "user", "content" to prompt)))
+        body.put("temperature", 0.2)
 
-        val url = URL("https://api.openai.com/v1/chat/completions")
-        val connection = url.openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/json")
-        connection.setRequestProperty("Authorization", "Bearer $OPENAI_API_KEY")
-        connection.doOutput = true
+        val requestBody = RequestBody.create(
+            "application/json".toMediaType(),
+            body.toString()
+        )
 
-        connection.outputStream.use { it.write(payload.toString().toByteArray()) }
+        val request = Request.Builder()
+            .url("https://api.openai.com/v1/chat/completions")
+            .addHeader("Authorization", "Bearer $API_KEY")
+            .post(requestBody)
+            .build()
 
-        val response = connection.inputStream.bufferedReader().readText()
-        val jsonResponse = JSONObject(response)
-        val message = jsonResponse
+        val client = OkHttpClient()
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) throw Exception("OpenAI call failed")
+
+        val text = JSONObject(response.body?.string())
             .getJSONArray("choices")
             .getJSONObject(0)
             .getJSONObject("message")
             .getString("content")
 
-        // Parse JSON from message
-        val parsed = JSONObject(message)
-        val filesArray = parsed.getJSONArray("files")
+        val message = Regex("(?i)MESSAGE:\\s*(.*)").find(text)?.groupValues?.get(1)?.trim() ?: "Build failed"
+        val file = Regex("(?i)FILE:\\s*(.*)").find(text)?.groupValues?.get(1)?.trim() ?: ""
+        val line = Regex("(?i)LINE:\\s*(\\d+)").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: -1
 
-        return (0 until filesArray.length()).map { i ->
-            val obj = filesArray.getJSONObject(i)
-            FileFix(
-                filePath = obj.getString("filePath"),
-                fixedCode = obj.getString("fixedCode")
-            )
-        }
+        return ErrorSummary(message, file, line)
     }
-
 }

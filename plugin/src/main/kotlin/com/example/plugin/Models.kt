@@ -18,10 +18,26 @@ data class GetFixRequest(
     val buildMessage: String
 )
 
+data class FileFix(
+    val path: String,
+    val code: String
+)
+
 data class GetFixResponse(
     val success: Boolean,
-    val files: List<Pair<String, String>>,
-    val message: String? = null
+    val files: List<FileFix>,
+    val error: String? = null
+)
+
+// Used by /doFix
+data class DoFixRequest(
+    val files: List<FileFix>
+)
+
+data class DoFixResponse(
+    val success: Boolean,
+    val updated: List<String> = emptyList(),
+    val error: String? = null
 )
 
 // Used by Ngrok API parsing
@@ -33,4 +49,10 @@ data class NgrokTunnel(
 
 data class NgrokResponse(
     val tunnels: List<NgrokTunnel>
+)
+
+data class ErrorSummary(
+    val message: String,
+    val file: String,
+    val line: Int
 )
