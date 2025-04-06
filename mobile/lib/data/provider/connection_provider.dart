@@ -42,6 +42,10 @@ class ConnectionStatusNotifier extends StateNotifier<ConnectionStatus> {
         final ok = await _repository.ping(_currentUrl!);
         if (!ok) {
           logger.w('First ping failed. Retrying once before disconnecting...');
+
+          // ⏳ Wait 3 seconds before trying again
+          await Future.delayed(const Duration(seconds: 3));
+          
           final retry = await _repository.ping(_currentUrl!);
 
           if (!retry) {
