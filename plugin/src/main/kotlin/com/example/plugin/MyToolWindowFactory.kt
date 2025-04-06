@@ -59,7 +59,7 @@ class MyToolWindowFactory : ToolWindowFactory {
             alignmentX = Component.CENTER_ALIGNMENT
             isOpaque = false
         }
-        val titleLabel = JBLabel("Program on the Go").apply {
+        val titleLabel = JBLabel("Tunnel").apply {
             font = UIUtil.getLabelFont().deriveFont(Font.BOLD, JBUI.scaleFontSize(16f).toFloat())
             border = JBUI.Borders.emptyBottom(4)
         }
@@ -222,7 +222,7 @@ class MyToolWindowFactory : ToolWindowFactory {
         }
         val aboutLabel = JBLabel(
             "<html>" +
-                    "<h2>About Program on the Go Plugin</h2>" +
+                    "<h2>About Tunnel Plugin</h2>" +
                     "<p>The plugin helps you build remotely an app so that you can be ready from anywhere.</p>" +
                     "<p>Developed by 1337.</p>" +
                     "<p>Thank you!</p>" +
