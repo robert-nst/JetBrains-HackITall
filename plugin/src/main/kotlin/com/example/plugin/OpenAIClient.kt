@@ -75,7 +75,7 @@ object OpenAIClient {
         val prompt = """
         A Java build has failed. Extract:
         - A one-line summary of the cause (start with "MESSAGE:")
-        - The source file path where the error happened (start with "FILE:" and extract the absolute path)
+        - The source file path where the error happened (start with "FILE:" and extract the absolute path, no relative path accepted)
         - The line number where the error occurred (start with "LINE:")
 
         Example:
