@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/data/connection_storage.dart';
 import 'package:mobile/data/domain/connection_status.dart';
@@ -28,14 +29,36 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
 
     Future.microtask(() {
       ref.read(connectionStatusProvider.notifier).connect(widget.url);
+
+      // Fetch build status once on screen load
+      _fetchInitialBuildStatus();
     });
+  }
+
+  void _fetchInitialBuildStatus() async {
+    final result = await ref.read(buildRepositoryProvider).getBuildStatus(widget.url);
+
+    if (result != null) {
+      ref.read(buildProvider.notifier).setState(result);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final connectionStatus = ref.watch(connectionStatusProvider);
     final buildData = ref.watch(buildProvider);
-    final buildStatus = buildData?['status']?.toString().toLowerCase();
+
+    // If build data was not retrieved yet, show loading indicator
+    if (buildData == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final buildStatus = buildData['status']?.toString().toLowerCase();
+
+    // Action
+    FlutterNativeSplash.remove();
 
     // If connection drops, show alert and redirect
     if (!_alertShown && connectionStatus == ConnectionStatus.disconnected && !_manualDisconnect) {
@@ -98,22 +121,37 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
                       ),
                     ] else ...[
                       Text(
-                        'Last build details:',
+                        'Last build details: $buildStatus',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      if (buildStatus == null) ...[
+                      if (buildStatus == 'idle') ...[
                         const Text('No build has been run yet.'),
                       ] else if (buildStatus == 'success') ...[
                         const Text('Build was successful!'),
                       ] else if (buildStatus == 'failure') ...[
                         const Text('Build failed!'),
-                        Text("Error: ${buildData!['errorMessage']}"),
+                        if (buildData['errorMessage'] == null) ...[
+                          const Text('Build was run through IDE.'),
+                        ] else ...[
+                          Text(buildData['errorMessage']),
+                        ],
                       ],
                     ],
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        if (buildStatus == 'failure') ...[
+                          ElevatedButton(
+                            onPressed: () => (),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                            ),
+                            child: const Text("See details"),
+                          ),
+                        ] else ...[
+                          const SizedBox(),
+                        ],
                         const SizedBox(),
                         ElevatedButton(
                           onPressed: (buildStatus == 'running')
@@ -138,6 +176,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
     );
   }
 
+  // Action
   Future<void> _handleRun(BuildContext context) async {
 
     await ref.read(buildProvider.notifier).run(widget.url);
@@ -151,6 +190,7 @@ class _ConnectedScreenState extends ConsumerState<ConnectedScreen> {
     }
   }
 
+  // Action
   Future<void> _handleDisconnect(BuildContext context) async {
     _manualDisconnect = true;
     await ConnectionStorage.clearConnectedUrl();

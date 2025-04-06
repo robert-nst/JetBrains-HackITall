@@ -31,7 +31,7 @@ void main() async {
   }
 
   // Done initializing — remove splash now
-  FlutterNativeSplash.remove();
+  // FlutterNativeSplash.remove();
 
   runApp(ProviderScope(child: MyApp(initialUrl: savedUrl)));
 }
