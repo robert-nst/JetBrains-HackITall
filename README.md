@@ -21,14 +21,6 @@ This plugin was developed for the **HackITall II Hackathon** with the main spons
 - **Build Suggestions:** If a build fails, the plugin uses the OpenAI API to provide simple error explanations and generate possible code fixes.
 - **Automatic Code Modification:** Applies the generated fixes directly in your code, with an option to rerun the build.
 
-## How It Works
-
-1. **Server Initialization:** Upon opening a new IntelliJ instance, the plugin launches an embedded server.
-2. **URL & QR Code Generation:** Once the server is up, a public URL is created using ngrok and displayed in the side toolbar, along with its QR code.
-3. **Remote Build Trigger:** The Flutter mobile app scans the QR code and connects to the server to initiate a remote build.
-4. **Error Handling & Suggestions:** If the build fails, the plugin calls the OpenAI API to analyze the error, displaying a simple error message and suggesting a potential solution.
-5. **Code Modification & Rerun:** The suggested code changes can be applied automatically, and you can rerun the build cycle until the build succeeds.
-
 ## Running the Plugin
 
 To run the plugin, you can use the provided Gradle run configuration. For example, run the following command in your project directory:
