@@ -1,10 +1,10 @@
-package com.example.plugin.handlers
+package com.example.plugin
 
 import com.example.plugin.EmbeddedServerHttp
 import com.example.plugin.EmbeddedServerHttp.BuildStatus
 import com.example.plugin.OpenAIClient
 import com.example.plugin.models.*
-import com.example.plugin.handlers.FirebaseNotificationSender
+import com.example.plugin.FirebaseNotificationSender
 import com.google.gson.Gson
 import com.intellij.execution.ExecutionManager
 import com.intellij.execution.RunManager

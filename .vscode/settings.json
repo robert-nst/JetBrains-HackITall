@@ -1,0 +1,18 @@
+{
+    "files.exclude": {
+        "**/mobile/.dart_tool": true,
+        "**/mobile/.flutter-plugins": true,
+        "**/mobile/.flutter-plugins-dependencies": true,
+        "**/mobile/.idea": true,
+        "**/mobile/.metadata": true,
+        "**/mobile/analysis_options.yaml": true,
+        "**/mobile/android/gradlew": true,
+        "**/mobile/android/gradlew.bat": true,
+        "**/mobile/android/local.properties": true,
+        "**/mobile/android/mobile_android.iml": true,
+        "**/mobile/build": true,
+        "**/mobile/ios": true,
+        "**/mobile/mobile.iml": true,
+        "**/mobile/pubspec.lock": true
+    }
+}

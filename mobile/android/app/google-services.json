@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "472656019268",
+    "project_id": "jetbrains-hackitall",
+    "storage_bucket": "jetbrains-hackitall.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:472656019268:android:d09fb0d9032710b6702111",
+        "android_client_info": {
+          "package_name": "com.example.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjLK-YVpUq_laxgW8geIQBsI9cq8WOXSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
