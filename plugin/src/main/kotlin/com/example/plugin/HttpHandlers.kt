@@ -66,11 +66,14 @@ class RunApplicationHandler : HttpHandler {
                                             if (text.contains("Tomcat started on port", ignoreCase = true)) {
                                                 EmbeddedServerHttp.currentBuildStatus = BuildStatus.SUCCESS
 
-                                                FirebaseNotificationSender.sendNotification(
-                                                    title = "✅ Build Success",
-                                                    body = "Your application built successfully.",
-                                                    deviceToken = "<DEVICE_TOKEN>"
-                                                )
+                                                // Sending success notification
+                                                EmbeddedServerHttp.fcmDeviceToken?.let { token ->
+                                                    FirebaseNotificationSender.sendNotification(
+                                                        title = "✅ Build Success",
+                                                        body = "Your application built successfully.",
+                                                        deviceToken = token
+                                                    )
+                                                }
                                             }
                                         }
 
@@ -83,11 +86,18 @@ class RunApplicationHandler : HttpHandler {
                                             EmbeddedServerHttp.currentBuildStatus = status
                                             EmbeddedServerHttp.log("[APP] Process terminated with exit code: ${event.exitCode}")
 
-                                            if (status == BuildStatus.FAILURE) {
+                                            // Sending notification based on build status
+                                            EmbeddedServerHttp.fcmDeviceToken?.let { token ->
+                                                val (title, body) = when (status) {
+                                                    BuildStatus.SUCCESS -> "✅ Build Success" to "Your application built successfully."
+                                                    BuildStatus.FAILURE -> "❌ Build Failure" to "Your application failed to build. Check details."
+                                                    else -> "Build Status" to "Build completed with status: $status"
+                                                }
+
                                                 FirebaseNotificationSender.sendNotification(
-                                                    title = "❌ Build Failure",
-                                                    body = "Your application failed to build. Check details.",
-                                                    deviceToken = "<DEVICE_TOKEN>"
+                                                    title = title,
+                                                    body = body,
+                                                    deviceToken = token
                                                 )
                                             }
                                         }
@@ -96,11 +106,14 @@ class RunApplicationHandler : HttpHandler {
                                     EmbeddedServerHttp.currentBuildStatus = BuildStatus.FAILURE
                                     EmbeddedServerHttp.log("[APP] Failed to obtain process handler.")
 
-                                    FirebaseNotificationSender.sendNotification(
-                                        title = "❌ Build Error",
-                                        body = "Could not start the build process.",
-                                        deviceToken = "<DEVICE_TOKEN>"
-                                    )
+                                    // Send notification about failure to start the build
+                                    EmbeddedServerHttp.fcmDeviceToken?.let { token ->
+                                        FirebaseNotificationSender.sendNotification(
+                                            title = "❌ Build Error",
+                                            body = "Could not start the build process.",
+                                            deviceToken = token
+                                        )
+                                    }
                                 }
                             }
                         }
