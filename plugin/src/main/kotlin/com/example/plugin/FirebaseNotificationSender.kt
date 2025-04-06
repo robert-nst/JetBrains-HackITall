@@ -1,4 +1,4 @@
-package com.example.plugin.handlers
+package com.example.plugin
 
 import com.google.auth.oauth2.GoogleCredentials
 import okhttp3.*
@@ -6,6 +6,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import org.json.JSONObject
 import java.io.FileInputStream
 import java.io.IOException
+import resources.*
 
 object FirebaseNotificationSender {
 
@@ -15,7 +16,7 @@ object FirebaseNotificationSender {
     private val client = OkHttpClient()
 
     private fun getAccessToken(): String {
-        val serviceAccountStream = FileInputStream("plugin/src/main/resources/serviceAccountKey.json")
+        val serviceAccountStream = FileInputStream("C:\\Users\\alexn\\Desktop\\JetBrains-HackITall\\plugin\\src\\main\\resources\\serviceAccountKey.json")
         val googleCredentials = GoogleCredentials
             .fromStream(serviceAccountStream)
             .createScoped(listOf(SCOPE))
